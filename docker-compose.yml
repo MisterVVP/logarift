@@ -1,0 +1,39 @@
+services:
+  mongodb:
+    image: mongo:8.3.2
+    container_name: logarift-mongodb
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27017:27017"
+    volumes:
+      - logarift_mongodb_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: logarift-backend
+    restart: unless-stopped
+    environment:
+      LOGARIFT_API_HOST: 0.0.0.0
+      LOGARIFT_API_PORT: 8080
+      LOGARIFT_MONGODB_URI: mongodb://mongodb:27017
+      LOGARIFT_MONGODB_DATABASE: logarift
+      LOGARIFT_MATH_ENGINE_PATH: /usr/local/bin/friction-math
+      LOGARIFT_EXPORT_DIR: /var/lib/logarift/exports
+      LOGARIFT_READINESS_TIMEOUT_MS: 10000
+      LOGARIFT_SHUTDOWN_TIMEOUT_MS: 5000
+    ports:
+      - "127.0.0.1:8080:8080"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+
+volumes:
+  logarift_mongodb_data:
