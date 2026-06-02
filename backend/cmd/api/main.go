@@ -13,6 +13,7 @@ import (
 	"github.com/MisterVVP/logarift/backend/internal/config"
 	"github.com/MisterVVP/logarift/backend/internal/database"
 	"github.com/MisterVVP/logarift/backend/internal/httpserver"
+	"github.com/MisterVVP/logarift/backend/internal/store/mongostore"
 	"github.com/MisterVVP/logarift/backend/internal/version"
 )
 
@@ -26,13 +27,27 @@ func main() {
 		os.Exit(1)
 	}
 
-	connectCtx, cancelConnect := context.WithTimeout(context.Background(), cfg.ReadinessTimeout)
+	connectCtx, cancelConnect := context.WithTimeout(context.Background(), cfg.MongoDBConnectTimeout)
 	db, err := database.ConnectWithRetry(connectCtx, cfg, 500*time.Millisecond)
 	cancelConnect()
 	if err != nil {
 		slog.Error("failed to connect to MongoDB", "error", err)
 		os.Exit(1)
 	}
+	bootstrapCtx, cancelBootstrap := context.WithTimeout(context.Background(), cfg.MongoDBConnectTimeout)
+	if err := db.EnsureIndexes(bootstrapCtx); err != nil {
+		cancelBootstrap()
+		slog.Error("failed to ensure MongoDB indexes", "error", err)
+		os.Exit(1)
+	}
+	stores := mongostore.New(db)
+	if err := mongostore.EnsureDefaultModelConfig(bootstrapCtx, stores.ModelConfigs); err != nil {
+		cancelBootstrap()
+		slog.Error("failed to ensure default model config", "error", err)
+		os.Exit(1)
+	}
+	cancelBootstrap()
+
 	defer func() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), cfg.ShutdownTimeout)
 		defer cancel()
