@@ -31,6 +31,10 @@ func New(client *database.Client) *Store {
 	db := client.Database()
 	return &Store{db: db, FrictionEvents: &frictionEventRepo{db.Collection(domain.CollectionFrictionEvents)}, WorkGoals: &workGoalRepo{db.Collection(domain.CollectionWorkGoals)}, WorkSessions: &workSessionRepo{db.Collection(domain.CollectionWorkSessions)}, ScoreSnapshots: &scoreSnapshotRepo{db.Collection(domain.CollectionScoreSnapshots)}, ModelConfigs: &modelConfigRepo{db.Collection(domain.CollectionModelConfigs)}, Exports: &exportRepo{db.Collection(domain.CollectionExports)}}
 }
+
+func (s *Store) Repositories() (store.FrictionEventRepository, store.WorkGoalRepository, store.WorkSessionRepository, store.ScoreSnapshotRepository, store.ModelConfigRepository, store.ExportRepository) {
+	return s.FrictionEvents, s.WorkGoals, s.WorkSessions, s.ScoreSnapshots, s.ModelConfigs, s.Exports
+}
 func EnsureDefaultModelConfig(ctx context.Context, repo store.ModelConfigRepository) error {
 	_, err := repo.GetDefault(ctx, domain.DefaultModelVersion)
 	if err == nil {

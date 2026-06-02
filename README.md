@@ -4,7 +4,11 @@ Logarift is a local-first Developer Experience friction logging system that reco
 
 ## MVP-2 backend persistence
 
-The backend now uses the MongoDB Go driver v2 import path (`go.mongodb.org/mongo-driver/v2`) for MongoDB connection readiness, status reporting, document repositories, and collection index bootstrap. Startup fails clearly if MongoDB cannot be pinged, indexes cannot be created, or the default MVP model configuration cannot be ensured.
+The backend now uses the MongoDB Go driver v2 import path (`go.mongodb.org/mongo-driver/v2`) for MongoDB connection readiness, status reporting, CQRS command/query storage flows, and collection index bootstrap. Startup fails clearly if MongoDB cannot be pinged, indexes cannot be created, command/query handlers cannot be registered, or the default MVP model configuration cannot be ensured.
+
+### Storage architecture
+
+The storage layer exposes explicit command and query modules under `backend/internal/store/commands`, `backend/internal/store/queries`, and `backend/internal/store/cqrs`. Commands mutate MongoDB-backed documents, queries retrieve documents, and the local orchestrator dispatches typed messages without adding external CQRS or mediator dependencies.
 
 ## Configuration
 

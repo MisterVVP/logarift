@@ -13,7 +13,10 @@ import (
 	"github.com/MisterVVP/logarift/backend/internal/config"
 	"github.com/MisterVVP/logarift/backend/internal/database"
 	"github.com/MisterVVP/logarift/backend/internal/httpserver"
+	"github.com/MisterVVP/logarift/backend/internal/store/commands"
+	"github.com/MisterVVP/logarift/backend/internal/store/cqrs"
 	"github.com/MisterVVP/logarift/backend/internal/store/mongostore"
+	"github.com/MisterVVP/logarift/backend/internal/store/queries"
 	"github.com/MisterVVP/logarift/backend/internal/version"
 )
 
@@ -41,7 +44,18 @@ func main() {
 		os.Exit(1)
 	}
 	stores := mongostore.New(db)
-	if err := mongostore.EnsureDefaultModelConfig(bootstrapCtx, stores.ModelConfigs); err != nil {
+	orchestrator := cqrs.New()
+	if err := commands.Register(orchestrator, commands.FromStore(stores)); err != nil {
+		cancelBootstrap()
+		slog.Error("failed to register MongoDB command handlers", "error", err)
+		os.Exit(1)
+	}
+	if err := queries.Register(orchestrator, queries.FromStore(stores)); err != nil {
+		cancelBootstrap()
+		slog.Error("failed to register MongoDB query handlers", "error", err)
+		os.Exit(1)
+	}
+	if _, err := cqrs.SendCommand[commands.EnsureDefaultModelConfig, cqrs.Empty](bootstrapCtx, orchestrator, commands.EnsureDefaultModelConfig{}); err != nil {
 		cancelBootstrap()
 		slog.Error("failed to ensure default model config", "error", err)
 		os.Exit(1)
