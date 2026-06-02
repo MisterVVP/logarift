@@ -3,6 +3,7 @@ FROM golang:1.25-bookworm AS build
 WORKDIR /src/backend
 
 COPY backend/go.mod backend/go.sum* ./
+COPY backend/internal/mongodriver/ ./internal/mongodriver/
 RUN go mod download
 
 COPY backend/ ./
