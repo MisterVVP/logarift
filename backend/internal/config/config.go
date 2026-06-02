@@ -10,26 +10,28 @@ import (
 )
 
 const (
-	defaultAPIHost            = "0.0.0.0"
-	defaultAPIPort            = "8080"
-	defaultMongoDBURI         = "mongodb://localhost:27017"
-	defaultMongoDBDatabase    = "logarift"
-	defaultMathEnginePath     = "./bin/friction-math"
-	defaultExportDir          = "./exports"
-	defaultReadinessTimeoutMS = 2000
-	defaultShutdownTimeoutMS  = 5000
+	defaultAPIHost                 = "0.0.0.0"
+	defaultAPIPort                 = "8080"
+	defaultMongoDBURI              = "mongodb://localhost:27017"
+	defaultMongoDBDatabase         = "logarift"
+	defaultMathEnginePath          = "./bin/friction-math"
+	defaultExportDir               = "./exports"
+	defaultReadinessTimeoutMS      = 2000
+	defaultShutdownTimeoutMS       = 5000
+	defaultMongoDBConnectTimeoutMS = 5000
 )
 
 // Config contains runtime settings for the local-first backend.
 type Config struct {
-	APIHost          string
-	APIPort          string
-	MongoDBURI       string
-	MongoDBDatabase  string
-	MathEnginePath   string
-	ExportDir        string
-	ReadinessTimeout time.Duration
-	ShutdownTimeout  time.Duration
+	APIHost               string
+	APIPort               string
+	MongoDBURI            string
+	MongoDBDatabase       string
+	MathEnginePath        string
+	ExportDir             string
+	ReadinessTimeout      time.Duration
+	ShutdownTimeout       time.Duration
+	MongoDBConnectTimeout time.Duration
 }
 
 // Load reads configuration from environment variables and applies local-first
@@ -37,14 +39,15 @@ type Config struct {
 // MongoDB URI to use the container service name.
 func Load() (Config, error) {
 	cfg := Config{
-		APIHost:          getenv("LOGARIFT_API_HOST", defaultAPIHost),
-		APIPort:          getenv("LOGARIFT_API_PORT", defaultAPIPort),
-		MongoDBURI:       getenv("LOGARIFT_MONGODB_URI", defaultMongoDBURI),
-		MongoDBDatabase:  getenv("LOGARIFT_MONGODB_DATABASE", defaultMongoDBDatabase),
-		MathEnginePath:   getenv("LOGARIFT_MATH_ENGINE_PATH", defaultMathEnginePath),
-		ExportDir:        getenv("LOGARIFT_EXPORT_DIR", defaultExportDir),
-		ReadinessTimeout: time.Duration(defaultReadinessTimeoutMS) * time.Millisecond,
-		ShutdownTimeout:  time.Duration(defaultShutdownTimeoutMS) * time.Millisecond,
+		APIHost:               getenv("LOGARIFT_API_HOST", defaultAPIHost),
+		APIPort:               getenv("LOGARIFT_API_PORT", defaultAPIPort),
+		MongoDBURI:            getenv("LOGARIFT_MONGODB_URI", defaultMongoDBURI),
+		MongoDBDatabase:       getenv("LOGARIFT_MONGODB_DATABASE", defaultMongoDBDatabase),
+		MathEnginePath:        getenv("LOGARIFT_MATH_ENGINE_PATH", defaultMathEnginePath),
+		ExportDir:             getenv("LOGARIFT_EXPORT_DIR", defaultExportDir),
+		ReadinessTimeout:      time.Duration(defaultReadinessTimeoutMS) * time.Millisecond,
+		ShutdownTimeout:       time.Duration(defaultShutdownTimeoutMS) * time.Millisecond,
+		MongoDBConnectTimeout: time.Duration(defaultMongoDBConnectTimeoutMS) * time.Millisecond,
 	}
 
 	readinessTimeout, err := getenvDurationMS("LOGARIFT_READINESS_TIMEOUT_MS", defaultReadinessTimeoutMS)
@@ -58,6 +61,12 @@ func Load() (Config, error) {
 		return Config{}, err
 	}
 	cfg.ShutdownTimeout = shutdownTimeout
+
+	connectTimeout, err := getenvDurationMS("LOGARIFT_MONGODB_CONNECT_TIMEOUT_MS", defaultMongoDBConnectTimeoutMS)
+	if err != nil {
+		return Config{}, err
+	}
+	cfg.MongoDBConnectTimeout = connectTimeout
 
 	if err := cfg.Validate(); err != nil {
 		return Config{}, err
@@ -93,6 +102,9 @@ func (c Config) Validate() error {
 	}
 	if c.ShutdownTimeout <= 0 {
 		return errors.New("LOGARIFT_SHUTDOWN_TIMEOUT_MS must be greater than zero")
+	}
+	if c.MongoDBConnectTimeout <= 0 {
+		return errors.New("LOGARIFT_MONGODB_CONNECT_TIMEOUT_MS must be greater than zero")
 	}
 	return nil
 }

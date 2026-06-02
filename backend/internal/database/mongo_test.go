@@ -1,30 +1,34 @@
 package database
 
-import "testing"
+import (
+	"context"
+	"testing"
+	"time"
 
-func TestAddressFromMongoURIUsesExplicitPort(t *testing.T) {
-	address, err := addressFromMongoURI("mongodb://localhost:27018")
+	"github.com/MisterVVP/logarift/backend/internal/config"
+)
+
+func TestConnectUsesConfiguredDatabaseName(t *testing.T) {
+	cfg := config.Config{MongoDBURI: "mongodb://localhost:27017", MongoDBDatabase: "logarift_test"}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	client, err := Connect(ctx, cfg)
 	if err != nil {
-		t.Fatalf("addressFromMongoURI returned error: %v", err)
+		t.Fatalf("Connect() error: %v", err)
 	}
-	if address != "localhost:27018" {
-		t.Fatalf("expected localhost:27018, got %s", address)
+	if client.DatabaseName() != "logarift_test" {
+		t.Fatalf("expected database name logarift_test, got %q", client.DatabaseName())
 	}
 }
-
-func TestAddressFromMongoURIDefaultsPort(t *testing.T) {
-	address, err := addressFromMongoURI("mongodb://mongodb")
+func TestEnsureIndexesDoesNotRequireCollectionsToExist(t *testing.T) {
+	cfg := config.Config{MongoDBURI: "mongodb://localhost:27017", MongoDBDatabase: "logarift_test_indexes"}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	client, err := Connect(ctx, cfg)
 	if err != nil {
-		t.Fatalf("addressFromMongoURI returned error: %v", err)
+		t.Fatalf("Connect() error: %v", err)
 	}
-	if address != "mongodb:27017" {
-		t.Fatalf("expected mongodb:27017, got %s", address)
-	}
-}
-
-func TestAddressFromMongoURIRejectsUnsupportedScheme(t *testing.T) {
-	_, err := addressFromMongoURI("mongodb+srv://cluster.example.com")
-	if err == nil {
-		t.Fatal("expected unsupported scheme error")
+	if err := client.EnsureIndexes(ctx); err != nil {
+		t.Fatalf("EnsureIndexes() error: %v", err)
 	}
 }
