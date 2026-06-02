@@ -13,6 +13,7 @@ import (
 // HealthChecker is satisfied by the MongoDB client wrapper and by tests.
 type HealthChecker interface {
 	Ping(ctx context.Context) error
+	DatabaseName() string
 }
 
 type Server struct {
@@ -97,12 +98,28 @@ func (s *Server) handleReadiness(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
+	databaseName := s.cfg.MongoDBDatabase
+	ready := false
+	if s.checker != nil {
+		if name := s.checker.DatabaseName(); name != "" {
+			databaseName = name
+		}
+		ctx, cancel := context.WithTimeout(r.Context(), s.cfg.ReadinessTimeout)
+		defer cancel()
+		ready = s.checker.Ping(ctx) == nil
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"service": s.build.Service,
 		"version": s.build.Version,
 		"commit":  s.build.Commit,
 		"runtime": map[string]any{
 			"config": s.cfg.PublicStatus(),
+		},
+		"database": map[string]any{
+			"kind":          "mongodb",
+			"database_name": databaseName,
+			"driver":        "go.mongodb.org/mongo-driver/v2",
+			"ready":         ready,
 		},
 		"capabilities": map[string]bool{
 			"local_first":      true,

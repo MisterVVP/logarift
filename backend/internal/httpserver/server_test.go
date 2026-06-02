@@ -20,6 +20,7 @@ type fakeChecker struct {
 func (f fakeChecker) Ping(ctx context.Context) error {
 	return f.err
 }
+func (f fakeChecker) DatabaseName() string { return "logarift" }
 
 func testConfig() config.Config {
 	return config.Config{
@@ -84,7 +85,7 @@ func TestReadinessReturnsUnavailableWhenMongoPingFails(t *testing.T) {
 	}
 }
 
-func TestStatusExposesMVP1Capabilities(t *testing.T) {
+func TestStatusExposesMVP2DatabaseAndCapabilities(t *testing.T) {
 	server := New(testConfig(), fakeChecker{}, version.BuildInfo{Service: "logarift-api", Version: "test", Commit: "abc"})
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
 	rr := httptest.NewRecorder()
@@ -109,6 +110,13 @@ func TestStatusExposesMVP1Capabilities(t *testing.T) {
 		t.Fatalf("expected authentication=false, got %#v", capabilities["authentication"])
 	}
 	if capabilities["event_crud"] != false {
-		t.Fatalf("MVP-1 should not expose event CRUD yet")
+		t.Fatalf("MVP-2 should not expose event CRUD yet")
+	}
+	database, ok := payload["database"].(map[string]any)
+	if !ok {
+		t.Fatalf("missing database map: %#v", payload)
+	}
+	if database["driver"] != "go.mongodb.org/mongo-driver/v2" || database["database_name"] != "logarift" || database["ready"] != true {
+		t.Fatalf("unexpected database status: %#v", database)
 	}
 }
