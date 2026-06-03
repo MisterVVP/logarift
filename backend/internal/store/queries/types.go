@@ -8,15 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
 
-type Handlers struct {
-	FrictionEvents store.FrictionEventRepository
-	WorkGoals      store.WorkGoalRepository
-	WorkSessions   store.WorkSessionRepository
-	ScoreSnapshots store.ScoreSnapshotRepository
-	ModelConfigs   store.ModelConfigRepository
-	Exports        store.ExportRepository
-}
-
 type GetFrictionEventByID struct {
 	Context context.Context
 	ID      bson.ObjectID
@@ -44,6 +35,7 @@ type ListWorkSessions struct {
 	Context context.Context
 	From    *time.Time
 	To      *time.Time
+	GoalID  *bson.ObjectID
 	Limit   int64
 }
 

@@ -12,7 +12,7 @@ import (
 
 type workSessionRepo struct{ c *mongo.Collection }
 
-func (r *workSessionRepo) Create(ctx context.Context, s *domain.WorkSession) error {
+func (r *workSessionRepo) create(ctx context.Context, s *domain.WorkSession) error {
 	if s == nil {
 		return fmt.Errorf("%w: nil work session", store.ErrInvalidInput)
 	}
@@ -23,10 +23,10 @@ func (r *workSessionRepo) Create(ctx context.Context, s *domain.WorkSession) err
 	_, err := r.c.InsertOne(ctx, s)
 	return err
 }
-func (r *workSessionRepo) GetByID(ctx context.Context, id bson.ObjectID) (*domain.WorkSession, error) {
+func (r *workSessionRepo) getByID(ctx context.Context, id bson.ObjectID) (*domain.WorkSession, error) {
 	return one[domain.WorkSession](ctx, r.c, id)
 }
-func (r *workSessionRepo) List(ctx context.Context, from *time.Time, to *time.Time, limit int64) ([]domain.WorkSession, error) {
+func (r *workSessionRepo) list(ctx context.Context, from *time.Time, to *time.Time, goalID *bson.ObjectID, limit int64) ([]domain.WorkSession, error) {
 	q := bson.M{}
 	tm := bson.M{}
 	if from != nil {
@@ -38,9 +38,12 @@ func (r *workSessionRepo) List(ctx context.Context, from *time.Time, to *time.Ti
 	if len(tm) > 0 {
 		q["started_at"] = tm
 	}
+	if goalID != nil {
+		q["goal_ids"] = *goalID
+	}
 	return findAll[domain.WorkSession](ctx, r.c, q, bson.D{{Key: "started_at", Value: -1}}, limit)
 }
-func (r *workSessionRepo) Update(ctx context.Context, s *domain.WorkSession) error {
+func (r *workSessionRepo) update(ctx context.Context, s *domain.WorkSession) error {
 	if s == nil {
 		return fmt.Errorf("%w: nil work session", store.ErrInvalidInput)
 	}
@@ -56,6 +59,6 @@ func (r *workSessionRepo) Update(ctx context.Context, s *domain.WorkSession) err
 	}
 	return replaceOne(ctx, r.c, s.ID, s)
 }
-func (r *workSessionRepo) Delete(ctx context.Context, id bson.ObjectID) error {
+func (r *workSessionRepo) delete(ctx context.Context, id bson.ObjectID) error {
 	return deleteOne(ctx, r.c, id)
 }

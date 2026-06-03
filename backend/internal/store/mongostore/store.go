@@ -18,25 +18,30 @@ const defaultLimit int64 = 100
 const maxLimit int64 = 500
 
 type Store struct {
-	FrictionEvents store.FrictionEventRepository
-	WorkGoals      store.WorkGoalRepository
-	WorkSessions   store.WorkSessionRepository
-	ScoreSnapshots store.ScoreSnapshotRepository
-	ModelConfigs   store.ModelConfigRepository
-	Exports        store.ExportRepository
+	frictionEvents *frictionEventRepo
+	workGoals      *workGoalRepo
+	workSessions   *workSessionRepo
+	scoreSnapshots *scoreSnapshotRepo
+	modelConfigs   *modelConfigRepo
+	exports        *exportRepo
 	db             *mongo.Database
 }
 
 func New(client *database.Client) *Store {
 	db := client.Database()
-	return &Store{db: db, FrictionEvents: &frictionEventRepo{db.Collection(domain.CollectionFrictionEvents)}, WorkGoals: &workGoalRepo{db.Collection(domain.CollectionWorkGoals)}, WorkSessions: &workSessionRepo{db.Collection(domain.CollectionWorkSessions)}, ScoreSnapshots: &scoreSnapshotRepo{db.Collection(domain.CollectionScoreSnapshots)}, ModelConfigs: &modelConfigRepo{db.Collection(domain.CollectionModelConfigs)}, Exports: &exportRepo{db.Collection(domain.CollectionExports)}}
+	return &Store{
+		db:             db,
+		frictionEvents: &frictionEventRepo{db.Collection(domain.CollectionFrictionEvents)},
+		workGoals:      &workGoalRepo{db.Collection(domain.CollectionWorkGoals)},
+		workSessions:   &workSessionRepo{db.Collection(domain.CollectionWorkSessions)},
+		scoreSnapshots: &scoreSnapshotRepo{db.Collection(domain.CollectionScoreSnapshots)},
+		modelConfigs:   &modelConfigRepo{db.Collection(domain.CollectionModelConfigs)},
+		exports:        &exportRepo{db.Collection(domain.CollectionExports)},
+	}
 }
 
-func (s *Store) Repositories() (store.FrictionEventRepository, store.WorkGoalRepository, store.WorkSessionRepository, store.ScoreSnapshotRepository, store.ModelConfigRepository, store.ExportRepository) {
-	return s.FrictionEvents, s.WorkGoals, s.WorkSessions, s.ScoreSnapshots, s.ModelConfigs, s.Exports
-}
-func EnsureDefaultModelConfig(ctx context.Context, repo store.ModelConfigRepository) error {
-	_, err := repo.GetDefault(ctx, domain.DefaultModelVersion)
+func ensureDefaultModelConfig(ctx context.Context, repo *modelConfigRepo) error {
+	_, err := repo.getDefault(ctx, domain.DefaultModelVersion)
 	if err == nil {
 		return nil
 	}
@@ -44,7 +49,7 @@ func EnsureDefaultModelConfig(ctx context.Context, repo store.ModelConfigReposit
 		return err
 	}
 	cfg := domain.DefaultModelConfig()
-	return repo.Create(ctx, &cfg)
+	return repo.create(ctx, &cfg)
 }
 func prepareCreate(id *bson.ObjectID, schema *int, created, updated *time.Time) {
 	now := time.Now().UTC()

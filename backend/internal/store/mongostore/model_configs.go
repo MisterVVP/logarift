@@ -11,7 +11,7 @@ import (
 
 type modelConfigRepo struct{ c *mongo.Collection }
 
-func (r *modelConfigRepo) Create(ctx context.Context, m *domain.ModelConfig) error {
+func (r *modelConfigRepo) create(ctx context.Context, m *domain.ModelConfig) error {
 	if m == nil {
 		return fmt.Errorf("%w: nil model config", store.ErrInvalidInput)
 	}
@@ -27,10 +27,10 @@ func (r *modelConfigRepo) Create(ctx context.Context, m *domain.ModelConfig) err
 	_, err := r.c.InsertOne(ctx, m)
 	return err
 }
-func (r *modelConfigRepo) GetByID(ctx context.Context, id bson.ObjectID) (*domain.ModelConfig, error) {
+func (r *modelConfigRepo) getByID(ctx context.Context, id bson.ObjectID) (*domain.ModelConfig, error) {
 	return one[domain.ModelConfig](ctx, r.c, id)
 }
-func (r *modelConfigRepo) GetDefault(ctx context.Context, mv string) (*domain.ModelConfig, error) {
+func (r *modelConfigRepo) getDefault(ctx context.Context, mv string) (*domain.ModelConfig, error) {
 	var out domain.ModelConfig
 	err := r.c.FindOne(ctx, bson.M{"model_version": mv, "is_default": true}).Decode(&out)
 	if err != nil {
@@ -41,11 +41,11 @@ func (r *modelConfigRepo) GetDefault(ctx context.Context, mv string) (*domain.Mo
 	}
 	return &out, nil
 }
-func (r *modelConfigRepo) List(ctx context.Context) ([]domain.ModelConfig, error) {
+func (r *modelConfigRepo) list(ctx context.Context) ([]domain.ModelConfig, error) {
 	return findAll[domain.ModelConfig](ctx, r.c, bson.M{}, bson.D{{Key: "created_at", Value: -1}}, maxLimit)
 }
-func (r *modelConfigRepo) SetDefault(ctx context.Context, id bson.ObjectID) error {
-	cfg, err := r.GetByID(ctx, id)
+func (r *modelConfigRepo) setDefault(ctx context.Context, id bson.ObjectID) error {
+	cfg, err := r.getByID(ctx, id)
 	if err != nil {
 		return err
 	}

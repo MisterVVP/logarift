@@ -11,7 +11,7 @@ import (
 
 type exportRepo struct{ c *mongo.Collection }
 
-func (r *exportRepo) Create(ctx context.Context, e *domain.ExportRecord) error {
+func (r *exportRepo) create(ctx context.Context, e *domain.ExportRecord) error {
 	if e == nil {
 		return fmt.Errorf("%w: nil export", store.ErrInvalidInput)
 	}
@@ -22,18 +22,18 @@ func (r *exportRepo) Create(ctx context.Context, e *domain.ExportRecord) error {
 	_, err := r.c.InsertOne(ctx, e)
 	return err
 }
-func (r *exportRepo) GetByID(ctx context.Context, id bson.ObjectID) (*domain.ExportRecord, error) {
+func (r *exportRepo) getByID(ctx context.Context, id bson.ObjectID) (*domain.ExportRecord, error) {
 	return one[domain.ExportRecord](ctx, r.c, id)
 }
-func (r *exportRepo) List(ctx context.Context, status string, limit int64) ([]domain.ExportRecord, error) {
+func (r *exportRepo) list(ctx context.Context, status string, limit int64) ([]domain.ExportRecord, error) {
 	q := bson.M{}
 	if status != "" {
 		q["status"] = status
 	}
 	return findAll[domain.ExportRecord](ctx, r.c, q, bson.D{{Key: "created_at", Value: -1}}, limit)
 }
-func (r *exportRepo) UpdateStatus(ctx context.Context, id bson.ObjectID, status string, filePath string) error {
-	rec, err := r.GetByID(ctx, id)
+func (r *exportRepo) updateStatus(ctx context.Context, id bson.ObjectID, status string, filePath string) error {
+	rec, err := r.getByID(ctx, id)
 	if err != nil {
 		return err
 	}
@@ -45,6 +45,6 @@ func (r *exportRepo) UpdateStatus(ctx context.Context, id bson.ObjectID, status 
 	}
 	return replaceOne(ctx, r.c, rec.ID, rec)
 }
-func (r *exportRepo) Delete(ctx context.Context, id bson.ObjectID) error {
+func (r *exportRepo) delete(ctx context.Context, id bson.ObjectID) error {
 	return deleteOne(ctx, r.c, id)
 }

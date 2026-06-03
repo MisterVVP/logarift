@@ -7,6 +7,10 @@ import (
 	"time"
 
 	"github.com/MisterVVP/logarift/backend/internal/config"
+	"github.com/MisterVVP/logarift/backend/internal/friction"
+	"github.com/MisterVVP/logarift/backend/internal/goals"
+	"github.com/MisterVVP/logarift/backend/internal/sessions"
+	"github.com/MisterVVP/logarift/backend/internal/store/cqrs"
 	"github.com/MisterVVP/logarift/backend/internal/version"
 )
 
@@ -22,15 +26,25 @@ type Server struct {
 	checker HealthChecker
 	router  *http.ServeMux
 	now     func() time.Time
+	api     apiServices
 }
 
 func New(cfg config.Config, checker HealthChecker, build version.BuildInfo) *Server {
+	return newServer(cfg, checker, build, apiServices{})
+}
+
+func NewWithDispatcher(cfg config.Config, checker HealthChecker, build version.BuildInfo, dispatcher *cqrs.Dispatcher) *Server {
+	return newServer(cfg, checker, build, apiServices{friction: friction.NewService(dispatcher, nil), goals: goals.NewService(dispatcher, nil), sessions: sessions.NewService(dispatcher, nil)})
+}
+
+func newServer(cfg config.Config, checker HealthChecker, build version.BuildInfo, api apiServices) *Server {
 	s := &Server{
 		cfg:     cfg,
 		build:   build,
 		checker: checker,
 		router:  http.NewServeMux(),
 		now:     time.Now,
+		api:     api,
 	}
 	s.routes()
 	return s
@@ -45,6 +59,7 @@ func (s *Server) routes() {
 	s.router.HandleFunc("GET /health/live", s.handleLiveness)
 	s.router.HandleFunc("GET /health/ready", s.handleReadiness)
 	s.router.HandleFunc("GET /api/v1/status", s.handleStatus)
+	s.registerAPIRoutes()
 }
 
 func (s *Server) handleIndex(w http.ResponseWriter, r *http.Request) {
@@ -127,7 +142,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 			"authentication":   false,
 			"cloud_sync":       false,
 			"hidden_telemetry": false,
-			"event_crud":       false,
+			"event_crud":       s.api.friction != nil && s.api.goals != nil && s.api.sessions != nil,
 			"scoring":          false,
 		},
 	})
