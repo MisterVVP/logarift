@@ -313,7 +313,7 @@ func matches(doc any, filter any) bool {
 			}
 			continue
 		}
-		if !reflect.DeepEqual(fv.Interface(), v) {
+		if !matchesValue(fv.Interface(), v) {
 			return false
 		}
 	}
@@ -336,6 +336,25 @@ func toM(v any) bson.M {
 		return bson.M{}
 	}
 }
+func matchesValue(a any, b any) bool {
+	av := reflect.ValueOf(a)
+	if av.IsValid() && av.Kind() == reflect.Pointer {
+		if av.IsNil() {
+			return b == nil
+		}
+		return matchesValue(av.Elem().Interface(), b)
+	}
+	if av.IsValid() && av.Kind() == reflect.Slice {
+		for i := 0; i < av.Len(); i++ {
+			if reflect.DeepEqual(av.Index(i).Interface(), b) {
+				return true
+			}
+		}
+		return false
+	}
+	return reflect.DeepEqual(a, b)
+}
+
 func compare(a any, op string, b any) bool {
 	switch av := a.(type) {
 	case time.Time:

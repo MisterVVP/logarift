@@ -4,18 +4,8 @@ import (
 	"context"
 
 	"github.com/MisterVVP/logarift/backend/internal/domain"
-	"github.com/MisterVVP/logarift/backend/internal/store"
 	"go.mongodb.org/mongo-driver/v2/bson"
 )
-
-type Handlers struct {
-	FrictionEvents store.FrictionEventRepository
-	WorkGoals      store.WorkGoalRepository
-	WorkSessions   store.WorkSessionRepository
-	ScoreSnapshots store.ScoreSnapshotRepository
-	ModelConfigs   store.ModelConfigRepository
-	Exports        store.ExportRepository
-}
 
 type IDResult struct {
 	ID bson.ObjectID

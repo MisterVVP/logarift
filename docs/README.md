@@ -11,25 +11,30 @@ Friction is not only a logged event.
 Friction is a compounding signal that affects cognitive load, flow stability, and systemic delivery drag.
 ```
 
-The documentation in this folder defines the MVP-0 foundation for the project. It describes the product vision, research background, original friction ontology, MVP boundaries, mathematical model, MongoDB data model, local-first architecture, and privacy/IP principles.
+The documentation in this folder is split into:
+
+- `product/` for product foundations, MVP boundaries, ontology, data model, local-first principles, and privacy/IP governance.
+- `technical/` for implementation architecture decisions and backend/frontend/persistence/math-engine technical notes.
 
 MVP-0 is intentionally documentation-only. It should guide later implementation tasks for the Go backend, React + Vite frontend, MongoDB persistence layer, and C++ math engine.
 
 ## Documentation Map
 
-Read the documents in this order.
+Read the product documents in this order, then consult technical documents when implementing or reviewing code.
 
-### 1. Product Vision
+### Product documents
 
-[00_product_vision.md](./00_product_vision.md)
+#### 1. Product Vision
+
+[product/00_product_vision.md](./product/00_product_vision.md)
 
 Defines the product direction, target users, core idea, differentiation, local-first principle, and long-term vision.
 
 Start here to understand what Logarift is and what it should avoid becoming.
 
-### 2. Research Foundation
+#### 2. Research Foundation
 
-[01_research_foundation.md](./01_research_foundation.md)
+[product/01_research_foundation.md](./product/01_research_foundation.md)
 
 Summarizes the public research and scientific concepts behind the product direction.
 
@@ -37,9 +42,9 @@ Covers cognitive load, interruptions, flow, motivation, queueing theory, Bayesia
 
 This document is background only. The project still uses its own original terminology, ontology, schemas, formulas, and implementation.
 
-### 3. Original Friction Ontology
+#### 3. Original Friction Ontology
 
-[02_original_friction_ontology.md](./02_original_friction_ontology.md)
+[product/02_original_friction_ontology.md](./product/02_original_friction_ontology.md)
 
 Defines the project’s initial original vocabulary for friction analysis.
 
@@ -57,9 +62,9 @@ Includes:
 
 Use this document when implementing event models, validation, UI dropdowns, and analytics grouping.
 
-### 4. MVP Scope
+#### 4. MVP Scope
 
-[03_mvp_scope.md](./03_mvp_scope.md)
+[product/03_mvp_scope.md](./product/03_mvp_scope.md)
 
 Defines what is included and excluded from the MVP.
 
@@ -67,9 +72,9 @@ The MVP includes local single-user mode, manual friction logging, goals, session
 
 The MVP excludes cloud deployment, authentication, team dashboards, IDE plugins, external importers, hidden telemetry, advanced research models, and AI-generated recommendations.
 
-### 5. MVP Math Model
+#### 5. MVP Math Model
 
-[04_mvp_math_model.md](./04_mvp_math_model.md)
+[product/04_mvp_math_model.md](./product/04_mvp_math_model.md)
 
 Defines the first deterministic scoring model.
 
@@ -82,9 +87,9 @@ MVP scores include:
 
 The formulas are product hypotheses, not validated universal scientific metrics. They should be implemented in a transparent and explainable way.
 
-### 6. MongoDB Data Model
+#### 6. MongoDB Data Model
 
-[05_mongodb_data_model.md](./05_mongodb_data_model.md)
+[product/05_mongodb_data_model.md](./product/05_mongodb_data_model.md)
 
 Defines the MVP MongoDB collections and document shapes.
 
@@ -101,9 +106,9 @@ exports
 
 Use this document when implementing repositories, indexes, validation, seed data, and API payload mapping.
 
-### 7. Local-First Architecture
+#### 7. Local-First Architecture
 
-[06_local_first_architecture.md](./06_local_first_architecture.md)
+[product/06_local_first_architecture.md](./product/06_local_first_architecture.md)
 
 Defines the high-level MVP architecture.
 
@@ -119,9 +124,9 @@ Docker Compose
 
 This document also explains why the C++ math engine should initially be invoked as a CLI through JSON stdin/stdout rather than integrated through cgo or a shared library.
 
-### 8. Privacy and IP Governance
+#### 8. Privacy and IP Governance
 
-[07_privacy_ip_governance.md](./07_privacy_ip_governance.md)
+[product/07_privacy_ip_governance.md](./product/07_privacy_ip_governance.md)
 
 Defines privacy and intellectual property principles.
 
@@ -134,6 +139,14 @@ Important principles:
 - private notes stay local
 - original ontology, schemas, formulas, UI, docs, and implementation belong to the project
 - public scientific research may inform the system, but proprietary company work must not be copied
+
+### Technical documents
+
+#### 1. CQRS Backend Architecture
+
+[technical/01_cqrs_backend_architecture.md](./technical/01_cqrs_backend_architecture.md)
+
+Defines the backend CQRS boundary used by the Go API. Services send command/query messages through one shared dispatcher; repository access is private to the Mongo store and its registered CQRS handlers.
 
 ## Design Constraints
 

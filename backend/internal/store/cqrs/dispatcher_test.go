@@ -4,6 +4,10 @@ import (
 	"context"
 	"errors"
 	"testing"
+
+	"github.com/MisterVVP/logarift/backend/internal/domain"
+	"github.com/MisterVVP/logarift/backend/internal/store/commands"
+	"github.com/MisterVVP/logarift/backend/internal/store/queries"
 )
 
 type testCommand struct {
@@ -92,5 +96,42 @@ func TestDispatcherRejectsDuplicateCommandRegistration(t *testing.T) {
 	}
 	if err := RegisterCommand[testCommand, int](dispatcher, handler); !errors.Is(err, ErrHandlerAlreadyRegistered) {
 		t.Fatalf("expected ErrHandlerAlreadyRegistered, got %v", err)
+	}
+}
+
+func TestRegisterHandlersReflectsCommandAndQueryPackages(t *testing.T) {
+	dispatcher := NewDispatcher()
+	if err := RegisterHandlers(
+		dispatcher,
+		func(ctx context.Context, command commands.EnsureDefaultModelConfig) (Empty, error) {
+			return Empty{}, nil
+		},
+		func(ctx context.Context, query queries.ListModelConfigs) ([]domain.ModelConfig, error) {
+			return []domain.ModelConfig{{ModelVersion: "test"}}, nil
+		},
+	); err != nil {
+		t.Fatalf("RegisterHandlers() error: %v", err)
+	}
+
+	if _, err := dispatcher.SendCommand(commands.EnsureDefaultModelConfig{}); err != nil {
+		t.Fatalf("SendCommand() error: %v", err)
+	}
+	got, err := dispatcher.SendQuery(queries.ListModelConfigs{})
+	if err != nil {
+		t.Fatalf("SendQuery() error: %v", err)
+	}
+	configs, ok := got.([]domain.ModelConfig)
+	if !ok || len(configs) != 1 || configs[0].ModelVersion != "test" {
+		t.Fatalf("unexpected query result: %#v", got)
+	}
+}
+
+func TestRegisterHandlerRejectsNonCQRSMessagePackage(t *testing.T) {
+	dispatcher := NewDispatcher()
+	err := RegisterHandler(dispatcher, func(ctx context.Context, command testCommand) (int, error) {
+		return command.Value, nil
+	})
+	if err == nil {
+		t.Fatalf("expected error for message outside commands/queries packages")
 	}
 }

@@ -13,5 +13,6 @@ type FrictionEventFilter struct {
 	FrictionType  string
 	GoalID        *bson.ObjectID
 	SessionID     *bson.ObjectID
+	Source        string
 	Limit         int64
 }

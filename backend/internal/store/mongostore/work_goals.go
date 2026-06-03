@@ -11,7 +11,7 @@ import (
 
 type workGoalRepo struct{ c *mongo.Collection }
 
-func (r *workGoalRepo) Create(ctx context.Context, g *domain.WorkGoal) error {
+func (r *workGoalRepo) create(ctx context.Context, g *domain.WorkGoal) error {
 	if g == nil {
 		return fmt.Errorf("%w: nil work goal", store.ErrInvalidInput)
 	}
@@ -22,17 +22,17 @@ func (r *workGoalRepo) Create(ctx context.Context, g *domain.WorkGoal) error {
 	_, err := r.c.InsertOne(ctx, g)
 	return err
 }
-func (r *workGoalRepo) GetByID(ctx context.Context, id bson.ObjectID) (*domain.WorkGoal, error) {
+func (r *workGoalRepo) getByID(ctx context.Context, id bson.ObjectID) (*domain.WorkGoal, error) {
 	return one[domain.WorkGoal](ctx, r.c, id)
 }
-func (r *workGoalRepo) List(ctx context.Context, status string, limit int64) ([]domain.WorkGoal, error) {
+func (r *workGoalRepo) list(ctx context.Context, status string, limit int64) ([]domain.WorkGoal, error) {
 	q := bson.M{}
 	if status != "" {
 		q["status"] = status
 	}
-	return findAll[domain.WorkGoal](ctx, r.c, q, bson.D{{Key: "updated_at", Value: -1}}, limit)
+	return findAll[domain.WorkGoal](ctx, r.c, q, bson.D{{Key: "created_at", Value: -1}}, limit)
 }
-func (r *workGoalRepo) Update(ctx context.Context, g *domain.WorkGoal) error {
+func (r *workGoalRepo) update(ctx context.Context, g *domain.WorkGoal) error {
 	if g == nil {
 		return fmt.Errorf("%w: nil work goal", store.ErrInvalidInput)
 	}
@@ -48,6 +48,6 @@ func (r *workGoalRepo) Update(ctx context.Context, g *domain.WorkGoal) error {
 	}
 	return replaceOne(ctx, r.c, g.ID, g)
 }
-func (r *workGoalRepo) Delete(ctx context.Context, id bson.ObjectID) error {
+func (r *workGoalRepo) delete(ctx context.Context, id bson.ObjectID) error {
 	return deleteOne(ctx, r.c, id)
 }

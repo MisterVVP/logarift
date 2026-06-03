@@ -11,7 +11,7 @@ import (
 
 type frictionEventRepo struct{ c *mongo.Collection }
 
-func (r *frictionEventRepo) Create(ctx context.Context, e *domain.FrictionEvent) error {
+func (r *frictionEventRepo) create(ctx context.Context, e *domain.FrictionEvent) error {
 	if e == nil {
 		return fmt.Errorf("%w: nil friction event", store.ErrInvalidInput)
 	}
@@ -22,10 +22,10 @@ func (r *frictionEventRepo) Create(ctx context.Context, e *domain.FrictionEvent)
 	_, err := r.c.InsertOne(ctx, e)
 	return err
 }
-func (r *frictionEventRepo) GetByID(ctx context.Context, id bson.ObjectID) (*domain.FrictionEvent, error) {
+func (r *frictionEventRepo) getByID(ctx context.Context, id bson.ObjectID) (*domain.FrictionEvent, error) {
 	return one[domain.FrictionEvent](ctx, r.c, id)
 }
-func (r *frictionEventRepo) List(ctx context.Context, f store.FrictionEventFilter) ([]domain.FrictionEvent, error) {
+func (r *frictionEventRepo) list(ctx context.Context, f store.FrictionEventFilter) ([]domain.FrictionEvent, error) {
 	q := bson.M{}
 	tm := bson.M{}
 	if f.From != nil {
@@ -52,9 +52,12 @@ func (r *frictionEventRepo) List(ctx context.Context, f store.FrictionEventFilte
 	if f.SessionID != nil {
 		q["session_id"] = *f.SessionID
 	}
+	if f.Source != "" {
+		q["source"] = f.Source
+	}
 	return findAll[domain.FrictionEvent](ctx, r.c, q, bson.D{{Key: "timestamp_start", Value: -1}}, f.Limit)
 }
-func (r *frictionEventRepo) Update(ctx context.Context, e *domain.FrictionEvent) error {
+func (r *frictionEventRepo) update(ctx context.Context, e *domain.FrictionEvent) error {
 	if e == nil {
 		return fmt.Errorf("%w: nil friction event", store.ErrInvalidInput)
 	}
@@ -70,6 +73,6 @@ func (r *frictionEventRepo) Update(ctx context.Context, e *domain.FrictionEvent)
 	}
 	return replaceOne(ctx, r.c, e.ID, e)
 }
-func (r *frictionEventRepo) Delete(ctx context.Context, id bson.ObjectID) error {
+func (r *frictionEventRepo) delete(ctx context.Context, id bson.ObjectID) error {
 	return deleteOne(ctx, r.c, id)
 }

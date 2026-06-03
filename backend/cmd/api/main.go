@@ -16,7 +16,6 @@ import (
 	"github.com/MisterVVP/logarift/backend/internal/store/commands"
 	"github.com/MisterVVP/logarift/backend/internal/store/cqrs"
 	"github.com/MisterVVP/logarift/backend/internal/store/mongostore"
-	"github.com/MisterVVP/logarift/backend/internal/store/queries"
 	"github.com/MisterVVP/logarift/backend/internal/version"
 )
 
@@ -45,14 +44,9 @@ func main() {
 	}
 	stores := mongostore.New(db)
 	dispatcher := cqrs.NewDispatcher()
-	if err := commands.Register(dispatcher, commands.FromStore(stores)); err != nil {
+	if err := stores.RegisterCQRS(dispatcher); err != nil {
 		cancelBootstrap()
-		slog.Error("failed to register MongoDB command handlers", "error", err)
-		os.Exit(1)
-	}
-	if err := queries.Register(dispatcher, queries.FromStore(stores)); err != nil {
-		cancelBootstrap()
-		slog.Error("failed to register MongoDB query handlers", "error", err)
+		slog.Error("failed to register MongoDB CQRS handlers", "error", err)
 		os.Exit(1)
 	}
 	if _, err := dispatcher.SendCommand(commands.EnsureDefaultModelConfig{Context: bootstrapCtx}); err != nil {
@@ -70,7 +64,7 @@ func main() {
 		}
 	}()
 
-	api := httpserver.New(cfg, db, version.Current())
+	api := httpserver.NewWithDispatcher(cfg, db, version.Current(), dispatcher)
 	server := &http.Server{
 		Addr:              cfg.Address(),
 		Handler:           api.Handler(),

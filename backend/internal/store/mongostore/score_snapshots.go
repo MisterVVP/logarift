@@ -12,7 +12,7 @@ import (
 
 type scoreSnapshotRepo struct{ c *mongo.Collection }
 
-func (r *scoreSnapshotRepo) Create(ctx context.Context, s *domain.ScoreSnapshot) error {
+func (r *scoreSnapshotRepo) create(ctx context.Context, s *domain.ScoreSnapshot) error {
 	if s == nil {
 		return fmt.Errorf("%w: nil score snapshot", store.ErrInvalidInput)
 	}
@@ -23,16 +23,16 @@ func (r *scoreSnapshotRepo) Create(ctx context.Context, s *domain.ScoreSnapshot)
 	_, err := r.c.InsertOne(ctx, s)
 	return err
 }
-func (r *scoreSnapshotRepo) GetByID(ctx context.Context, id bson.ObjectID) (*domain.ScoreSnapshot, error) {
+func (r *scoreSnapshotRepo) getByID(ctx context.Context, id bson.ObjectID) (*domain.ScoreSnapshot, error) {
 	return one[domain.ScoreSnapshot](ctx, r.c, id)
 }
-func (r *scoreSnapshotRepo) List(ctx context.Context, from time.Time, to time.Time, scoreType string, limit int64) ([]domain.ScoreSnapshot, error) {
+func (r *scoreSnapshotRepo) list(ctx context.Context, from time.Time, to time.Time, scoreType string, limit int64) ([]domain.ScoreSnapshot, error) {
 	q := bson.M{"period_start": bson.M{"$gte": from}, "period_end": bson.M{"$lte": to}}
 	if scoreType != "" {
 		q["score_type"] = scoreType
 	}
 	return findAll[domain.ScoreSnapshot](ctx, r.c, q, bson.D{{Key: "period_start", Value: -1}}, limit)
 }
-func (r *scoreSnapshotRepo) Delete(ctx context.Context, id bson.ObjectID) error {
+func (r *scoreSnapshotRepo) delete(ctx context.Context, id bson.ObjectID) error {
 	return deleteOne(ctx, r.c, id)
 }
