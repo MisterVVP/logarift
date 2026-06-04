@@ -1,12 +1,13 @@
-FROM golang:1.25-bookworm AS build
+FROM golang:1.25 AS build
 
 WORKDIR /src/backend
 
-COPY backend/go.mod backend/go.sum* ./
-COPY backend/internal/mongodriver/ ./internal/mongodriver/
-RUN go mod download
-
+# Copy the full backend source before downloading modules.
+# The repository may not contain a pre-generated go.sum in early archives,
+# so downloading after the full copy prevents an empty host go.sum from
+# overwriting the generated one before the build step.
 COPY backend/ ./
+RUN go mod download
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o /out/logarift-api ./cmd/api
 
 FROM debian:bookworm-slim

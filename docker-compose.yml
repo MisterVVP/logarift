@@ -14,6 +14,17 @@ services:
       retries: 12
       start_period: 5s
 
+  math-engine:
+    build:
+      context: .
+      dockerfile: math-engine/Dockerfile
+    container_name: logarift-math-engine
+    restart: unless-stopped
+    environment:
+      LOGARIFT_MATH_ENGINE_PORT: 8090
+    ports:
+      - "127.0.0.1:8090:8090"
+
   backend:
     build:
       context: .
@@ -25,7 +36,7 @@ services:
       LOGARIFT_API_PORT: 8080
       LOGARIFT_MONGODB_URI: mongodb://mongodb:27017
       LOGARIFT_MONGODB_DATABASE: logarift
-      LOGARIFT_MATH_ENGINE_PATH: /usr/local/bin/friction-math
+      LOGARIFT_MATH_ENGINE_URL: http://math-engine:8090
       LOGARIFT_EXPORT_DIR: /var/lib/logarift/exports
       LOGARIFT_READINESS_TIMEOUT_MS: 10000
       LOGARIFT_SHUTDOWN_TIMEOUT_MS: 5000
@@ -34,6 +45,21 @@ services:
     depends_on:
       mongodb:
         condition: service_healthy
+      math-engine:
+        condition: service_started
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    container_name: logarift-frontend
+    restart: unless-stopped
+    environment:
+      VITE_LOGARIFT_API_BASE_URL: http://localhost:8080
+    ports:
+      - "127.0.0.1:5173:5173"
+    depends_on:
+      - backend
 
 volumes:
   logarift_mongodb_data:

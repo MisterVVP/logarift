@@ -14,7 +14,7 @@ MVP components:
 React + Vite frontend
 Go backend API
 MongoDB
-C++ math engine CLI
+C++ math engine service
 Docker Compose
 ```
 
@@ -31,7 +31,7 @@ Go backend API
   |
   +--> MongoDB
   |
-  +--> C++ math engine CLI
+  +--> C++ math engine service
 ```
 
 ## Primary Event Flow
@@ -42,8 +42,8 @@ Frontend sends request to Go API
 Go API validates event
 Go API stores event in MongoDB
 Go API requests score calculation
-C++ math CLI receives JSON input
-C++ math CLI returns JSON score output
+C++ math engine service receives JSON input over HTTP
+C++ math engine service returns JSON score output
 Go API stores score snapshot
 Frontend displays dashboard
 ```
@@ -60,7 +60,7 @@ The Go backend owns:
 - goal persistence
 - score snapshot persistence
 - export generation
-- invoking the C++ math CLI
+- calling the C++ math engine service
 - serving frontend in packaged mode if needed later
 
 ## Frontend Responsibilities
@@ -101,32 +101,31 @@ The engine should:
 - avoid hidden state
 - be testable independently
 
-## Why CLI First
+## Why a Separate Math Service
 
-The C++ engine should initially be called as a CLI executable instead of a shared library.
+The C++ engine runs as a separate local service instead of being linked into the Go backend.
 
 Reasons:
 
-- simpler implementation
 - avoids cgo complexity
-- explicit language boundary
-- easy process isolation
-- deterministic JSON input/output
-- independent testability
-- easier for agentic implementation
+- keeps the language boundary explicit
+- allows independent scaling and testing
+- keeps backend and scoring failures isolated
+- preserves deterministic JSON input/output
+- fits Docker Compose local development
 
-Future versions may expose a shared library if performance requires it.
+The same binary may retain CLI-compatible stdin/stdout mode for smoke tests, but backend integration should use HTTP.
 
 ## API Boundary
 
-The Go backend should communicate with the C++ engine using files or stdin/stdout JSON.
+The Go backend communicates with the C++ engine over HTTP.
 
 Preferred MVP approach:
 
 ```text
 Go serializes scoring request to JSON
-Go sends JSON to math CLI through stdin
-Math CLI writes JSON response to stdout
+Go posts JSON to math-engine /v1/score
+Math engine returns JSON response
 Go parses JSON response
 Go stores score snapshot
 ```
@@ -145,9 +144,10 @@ Expected services:
 backend
 frontend
 mongodb
+math-engine
 ```
 
-The C++ math engine may be built as part of backend image or mounted as a local binary during early development.
+The C++ math engine has its own Docker image and runs as a separate local service.
 
 ## Configuration
 
@@ -159,7 +159,7 @@ Suggested variables:
 LOGARIFT_API_PORT
 LOGARIFT_MONGODB_URI
 LOGARIFT_MONGODB_DATABASE
-LOGARIFT_MATH_ENGINE_PATH
+LOGARIFT_MATH_ENGINE_URL
 LOGARIFT_EXPORT_DIR
 ```
 

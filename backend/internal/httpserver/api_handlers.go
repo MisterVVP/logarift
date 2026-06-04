@@ -6,6 +6,7 @@ import (
 
 	"github.com/MisterVVP/logarift/backend/internal/friction"
 	"github.com/MisterVVP/logarift/backend/internal/goals"
+	"github.com/MisterVVP/logarift/backend/internal/scoring"
 	"github.com/MisterVVP/logarift/backend/internal/serviceerror"
 	"github.com/MisterVVP/logarift/backend/internal/sessions"
 )
@@ -14,6 +15,7 @@ type apiServices struct {
 	friction *friction.Service
 	goals    *goals.Service
 	sessions *sessions.Service
+	scoring  *scoring.Service
 }
 
 func (s *Server) registerAPIRoutes() {
@@ -37,6 +39,12 @@ func (s *Server) registerAPIRoutes() {
 		s.router.HandleFunc("GET /api/v1/work-sessions/{id}", s.getWorkSession)
 		s.router.HandleFunc("PUT /api/v1/work-sessions/{id}", s.updateWorkSession)
 		s.router.HandleFunc("DELETE /api/v1/work-sessions/{id}", s.deleteWorkSession)
+	}
+
+	if s.api.scoring != nil {
+		s.router.HandleFunc("POST /api/v1/scores/calculate", s.calculateScores)
+		s.router.HandleFunc("GET /api/v1/score-snapshots", s.listScoreSnapshots)
+		s.router.HandleFunc("GET /api/v1/score-snapshots/{id}", s.getScoreSnapshot)
 	}
 }
 
@@ -237,4 +245,51 @@ func queryTime(r *http.Request, key string) (*time.Time, error) {
 	}
 	t = t.UTC()
 	return &t, nil
+}
+
+func (s *Server) calculateScores(w http.ResponseWriter, r *http.Request) {
+	var req scoring.CalculateRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeInvalidJSON(w)
+		return
+	}
+	snapshot, err := s.api.scoring.Calculate(r.Context(), req)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"snapshot": snapshot})
+}
+
+func (s *Server) listScoreSnapshots(w http.ResponseWriter, r *http.Request) {
+	limit, err := parseLimit(r.URL.Query().Get("limit"))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	from, err := queryTime(r, "from")
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	to, err := queryTime(r, "to")
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	page, err := s.api.scoring.List(r.Context(), scoring.Filter{From: from, To: to, ScoreType: r.URL.Query().Get("score_type"), Limit: limit})
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"snapshots": page.Snapshots, "next_cursor": page.NextCursor})
+}
+
+func (s *Server) getScoreSnapshot(w http.ResponseWriter, r *http.Request) {
+	snapshot, err := s.api.scoring.Get(r.Context(), r.PathValue("id"))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"snapshot": snapshot})
 }

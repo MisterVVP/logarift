@@ -85,15 +85,15 @@ The dashboard should show:
 - top cognitive-load sources
 - score cards for MVP metrics
 
-### C++ Scoring CLI
+### C++ Scoring Service
 
-The MVP includes a deterministic C++ command-line scoring executable.
+The MVP includes a deterministic C++ scoring application. In Docker Compose it runs as a separate HTTP service. For local tests it also supports CLI-compatible stdin/stdout mode.
 
-The CLI receives JSON input and returns JSON output.
+The service receives JSON input and returns JSON output.
 
-### Go API Integration with Scoring CLI
+### Go API Integration with Scoring Service
 
-The Go backend calls the C++ scoring CLI and stores score snapshots.
+The Go backend calls the C++ scoring service and stores score snapshots.
 
 ### JSON Export
 
@@ -146,8 +146,8 @@ The MVP is successful when:
 - the user can log a friction event in under 15 seconds
 - events are persisted in MongoDB
 - the dashboard shows basic analytics
-- the C++ scoring CLI produces deterministic output
-- the Go backend can call the scoring CLI
+- the C++ scoring service produces deterministic output
+- the Go backend can call the scoring service
 - the user can export data as JSON
 - the system remains understandable and explainable
 

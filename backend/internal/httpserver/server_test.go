@@ -28,7 +28,7 @@ func testConfig() config.Config {
 		APIPort:          "8080",
 		MongoDBURI:       "mongodb://localhost:27017",
 		MongoDBDatabase:  "logarift",
-		MathEnginePath:   "./bin/friction-math",
+		MathEngineURL:    "http://localhost:8090",
 		ExportDir:        "./exports",
 		ReadinessTimeout: 100 * time.Millisecond,
 		ShutdownTimeout:  100 * time.Millisecond,

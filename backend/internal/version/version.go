@@ -9,7 +9,7 @@ type BuildInfo struct {
 }
 
 var (
-	Version = "mvp-1"
+	Version = "mvp-7"
 	Commit  = "dev"
 )
 

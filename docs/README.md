@@ -68,7 +68,7 @@ Use this document when implementing event models, validation, UI dropdowns, and 
 
 Defines what is included and excluded from the MVP.
 
-The MVP includes local single-user mode, manual friction logging, goals, sessions, MongoDB persistence, basic dashboarding, C++ scoring CLI integration, JSON export, and seed/demo data.
+The MVP includes local single-user mode, manual friction logging, goals, sessions, MongoDB persistence, basic dashboarding, C++ scoring service integration, JSON export, and seed/demo data.
 
 The MVP excludes cloud deployment, authentication, team dashboards, IDE plugins, external importers, hidden telemetry, advanced research models, and AI-generated recommendations.
 
@@ -118,11 +118,11 @@ MVP components:
 React + Vite frontend
 Go backend API
 MongoDB
-C++ math engine CLI
+C++ math engine service
 Docker Compose
 ```
 
-This document also explains why the C++ math engine should initially be invoked as a CLI through JSON stdin/stdout rather than integrated through cgo or a shared library.
+This document explains the local architecture and the explicit HTTP boundary between the Go backend and the separate C++ math engine service.
 
 #### 8. Privacy and IP Governance
 
@@ -160,7 +160,7 @@ Implementation work should preserve these constraints:
 - The MVP does not include hidden telemetry.
 - The MVP does not rank developers.
 - The MVP math is deterministic and explainable.
-- The MVP C++ math engine is CLI-first.
+- The MVP C++ math engine is a separate service in Docker Compose and remains CLI-compatible for local deterministic tests.
 - Proprietary company taxonomies, survey wording, dashboards, and scoring systems must not be copied.
 
 ## Contribution Notes
@@ -172,3 +172,16 @@ When adding or changing documentation:
 - preserve original project terminology unless intentionally evolving it
 - update this README when adding new documentation files
 - document major product or architecture changes before implementing them
+
+
+### 9. MVP-3 to MVP-7 Implementation Notes
+
+[technical/02_mvp_3_to_7_implementation.md](./technical/02_mvp_3_to_7_implementation.md)
+
+Describes the implemented backend CRUD APIs, C++ math engine, backend scoring integration, React + Vite frontend, and dashboard.
+
+### 10. Local Check Runbook
+
+[runbooks/local_check.md](./runbooks/local_check.md)
+
+Step-by-step commands for testing the backend, math engine, scoring endpoint, frontend, and Docker Compose stack.

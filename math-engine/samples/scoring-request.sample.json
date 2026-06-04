@@ -1,0 +1,30 @@
+{
+  "model_version": "mvp-0.1",
+  "period_start": "2026-06-01T00:00:00Z",
+  "period_end": "2026-06-07T23:59:59Z",
+  "events": [
+    {
+      "id": "665eea6b2f11a6de4f59f003",
+      "timestamp_start": "2026-06-01T09:15:00Z",
+      "timestamp_end": "2026-06-01T09:35:00Z",
+      "friction_type": "failed_feedback",
+      "severity_self": 4,
+      "cognitive_load_self": 3,
+      "time_lost_minutes": 20,
+      "resume_time_minutes": 8,
+      "recovery_minutes": 0,
+      "interruption_count": 1
+    },
+    {
+      "id": "665eea6b2f11a6de4f59f004",
+      "timestamp_start": "2026-06-02T10:00:00Z",
+      "friction_type": "waiting_for_ci",
+      "severity_self": 3,
+      "cognitive_load_self": 2,
+      "time_lost_minutes": 30,
+      "resume_time_minutes": 4,
+      "recovery_minutes": 0,
+      "interruption_count": 0
+    }
+  ]
+}

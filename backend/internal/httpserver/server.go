@@ -9,6 +9,7 @@ import (
 	"github.com/MisterVVP/logarift/backend/internal/config"
 	"github.com/MisterVVP/logarift/backend/internal/friction"
 	"github.com/MisterVVP/logarift/backend/internal/goals"
+	"github.com/MisterVVP/logarift/backend/internal/scoring"
 	"github.com/MisterVVP/logarift/backend/internal/sessions"
 	"github.com/MisterVVP/logarift/backend/internal/store/cqrs"
 	"github.com/MisterVVP/logarift/backend/internal/version"
@@ -34,7 +35,7 @@ func New(cfg config.Config, checker HealthChecker, build version.BuildInfo) *Ser
 }
 
 func NewWithDispatcher(cfg config.Config, checker HealthChecker, build version.BuildInfo, dispatcher *cqrs.Dispatcher) *Server {
-	return newServer(cfg, checker, build, apiServices{friction: friction.NewService(dispatcher, nil), goals: goals.NewService(dispatcher, nil), sessions: sessions.NewService(dispatcher, nil)})
+	return newServer(cfg, checker, build, apiServices{friction: friction.NewService(dispatcher, nil), goals: goals.NewService(dispatcher, nil), sessions: sessions.NewService(dispatcher, nil), scoring: scoring.NewService(dispatcher, cfg.MathEngineURL, nil)})
 }
 
 func newServer(cfg config.Config, checker HealthChecker, build version.BuildInfo, api apiServices) *Server {
@@ -51,7 +52,7 @@ func newServer(cfg config.Config, checker HealthChecker, build version.BuildInfo
 }
 
 func (s *Server) Handler() http.Handler {
-	return requestIDMiddleware(loggingMiddleware(s.router))
+	return corsMiddleware(requestIDMiddleware(loggingMiddleware(s.router)))
 }
 
 func (s *Server) routes() {
@@ -143,7 +144,7 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 			"cloud_sync":       false,
 			"hidden_telemetry": false,
 			"event_crud":       s.api.friction != nil && s.api.goals != nil && s.api.sessions != nil,
-			"scoring":          false,
+			"scoring":          s.api.scoring != nil,
 		},
 	})
 }

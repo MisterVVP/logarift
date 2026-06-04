@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -14,7 +15,7 @@ const (
 	defaultAPIPort                 = "8080"
 	defaultMongoDBURI              = "mongodb://localhost:27017"
 	defaultMongoDBDatabase         = "logarift"
-	defaultMathEnginePath          = "./bin/friction-math"
+	defaultMathEngineURL           = "http://localhost:8090"
 	defaultExportDir               = "./exports"
 	defaultReadinessTimeoutMS      = 2000
 	defaultShutdownTimeoutMS       = 5000
@@ -27,7 +28,7 @@ type Config struct {
 	APIPort               string
 	MongoDBURI            string
 	MongoDBDatabase       string
-	MathEnginePath        string
+	MathEngineURL         string
 	ExportDir             string
 	ReadinessTimeout      time.Duration
 	ShutdownTimeout       time.Duration
@@ -43,7 +44,7 @@ func Load() (Config, error) {
 		APIPort:               getenv("LOGARIFT_API_PORT", defaultAPIPort),
 		MongoDBURI:            getenv("LOGARIFT_MONGODB_URI", defaultMongoDBURI),
 		MongoDBDatabase:       getenv("LOGARIFT_MONGODB_DATABASE", defaultMongoDBDatabase),
-		MathEnginePath:        getenv("LOGARIFT_MATH_ENGINE_PATH", defaultMathEnginePath),
+		MathEngineURL:         getenv("LOGARIFT_MATH_ENGINE_URL", defaultMathEngineURL),
 		ExportDir:             getenv("LOGARIFT_EXPORT_DIR", defaultExportDir),
 		ReadinessTimeout:      time.Duration(defaultReadinessTimeoutMS) * time.Millisecond,
 		ShutdownTimeout:       time.Duration(defaultShutdownTimeoutMS) * time.Millisecond,
@@ -91,8 +92,15 @@ func (c Config) Validate() error {
 	if c.MongoDBDatabase == "" {
 		return errors.New("LOGARIFT_MONGODB_DATABASE must not be empty")
 	}
-	if c.MathEnginePath == "" {
-		return errors.New("LOGARIFT_MATH_ENGINE_PATH must not be empty")
+	if c.MathEngineURL == "" {
+		return errors.New("LOGARIFT_MATH_ENGINE_URL must not be empty")
+	}
+	parsedMathURL, err := url.Parse(c.MathEngineURL)
+	if err != nil || parsedMathURL.Scheme == "" || parsedMathURL.Host == "" {
+		return fmt.Errorf("LOGARIFT_MATH_ENGINE_URL must be an absolute HTTP URL, got %q", c.MathEngineURL)
+	}
+	if parsedMathURL.Scheme != "http" && parsedMathURL.Scheme != "https" {
+		return fmt.Errorf("LOGARIFT_MATH_ENGINE_URL must use http or https, got %q", parsedMathURL.Scheme)
 	}
 	if c.ExportDir == "" {
 		return errors.New("LOGARIFT_EXPORT_DIR must not be empty")
@@ -120,7 +128,7 @@ func (c Config) PublicStatus() map[string]any {
 		"api_port":               c.APIPort,
 		"mongodb_database":       c.MongoDBDatabase,
 		"mongodb_uri_configured": c.MongoDBURI != "",
-		"math_engine_path":       c.MathEnginePath,
+		"math_engine_url":        c.MathEngineURL,
 		"export_dir":             c.ExportDir,
 	}
 }

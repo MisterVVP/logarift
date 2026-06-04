@@ -7,7 +7,7 @@ func TestLoadUsesLocalDefaults(t *testing.T) {
 	t.Setenv("LOGARIFT_API_PORT", "")
 	t.Setenv("LOGARIFT_MONGODB_URI", "")
 	t.Setenv("LOGARIFT_MONGODB_DATABASE", "")
-	t.Setenv("LOGARIFT_MATH_ENGINE_PATH", "")
+	t.Setenv("LOGARIFT_MATH_ENGINE_URL", "")
 	t.Setenv("LOGARIFT_EXPORT_DIR", "")
 	t.Setenv("LOGARIFT_READINESS_TIMEOUT_MS", "")
 	t.Setenv("LOGARIFT_SHUTDOWN_TIMEOUT_MS", "")
@@ -39,7 +39,7 @@ func TestPublicStatusDoesNotExposeMongoURI(t *testing.T) {
 		APIPort:         "8080",
 		MongoDBURI:      "mongodb://user:secret@localhost:27017",
 		MongoDBDatabase: "logarift",
-		MathEnginePath:  "./bin/friction-math",
+		MathEngineURL:   "http://localhost:8090",
 		ExportDir:       "./exports",
 	}
 

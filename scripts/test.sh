@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
 set -euo pipefail
 cd "$(dirname "$0")/.."
-cd backend
-go test ./...
+make test
