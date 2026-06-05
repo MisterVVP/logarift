@@ -81,3 +81,20 @@ LOGARIFT_MATH_ENGINE_URL=http://math-engine:8090
 - per-event Friction Cost Score (`fcs`)
 
 The formulas are deterministic MVP product hypotheses and are not presented as universal validated scientific metrics.
+
+## Observability
+
+Service mode writes structured JSON logs to stderr/stdout as container logs. Logs include:
+
+- `math engine listening` with port
+- `score request received` with request id and payload size
+- `score calculation completed` with event count, period, CLA, FCI, SDC, total wait minutes, total active minutes, top contributor count, and calculation duration
+- `score request completed` with status and duration
+
+Example:
+
+```json
+{"level":"info","service":"logarift-math-engine","message":"score calculation completed","event_count":"3","cla":"31.2000","fci":"12.8000","sdc":"0.4200"}
+```
+
+CLI-compatible mode still writes score JSON to stdout, so scripts can parse it. Calculation logs are emitted separately and do not change the response contract.

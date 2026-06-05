@@ -30,6 +30,7 @@ func testConfig() config.Config {
 		MongoDBDatabase:  "logarift",
 		MathEngineURL:    "http://localhost:8090",
 		ExportDir:        "./exports",
+		UploadDir:        "./data/uploads-test",
 		ReadinessTimeout: 100 * time.Millisecond,
 		ShutdownTimeout:  100 * time.Millisecond,
 	}

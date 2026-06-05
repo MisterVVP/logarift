@@ -20,6 +20,7 @@ type apiServices struct {
 
 func (s *Server) registerAPIRoutes() {
 	if s.api.friction != nil {
+		s.router.HandleFunc("POST /api/v1/friction-events/quick", s.createQuickFrictionEvent)
 		s.router.HandleFunc("POST /api/v1/friction-events", s.createFrictionEvent)
 		s.router.HandleFunc("GET /api/v1/friction-events", s.listFrictionEvents)
 		s.router.HandleFunc("GET /api/v1/friction-events/{id}", s.getFrictionEvent)
@@ -46,6 +47,20 @@ func (s *Server) registerAPIRoutes() {
 		s.router.HandleFunc("GET /api/v1/score-snapshots", s.listScoreSnapshots)
 		s.router.HandleFunc("GET /api/v1/score-snapshots/{id}", s.getScoreSnapshot)
 	}
+}
+
+func (s *Server) createQuickFrictionEvent(w http.ResponseWriter, r *http.Request) {
+	var req friction.QuickRequest
+	if err := decodeJSON(r, &req); err != nil {
+		writeInvalidJSON(w)
+		return
+	}
+	event, err := s.api.friction.CreateQuick(r.Context(), req)
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusCreated, map[string]any{"event": event})
 }
 
 func (s *Server) createFrictionEvent(w http.ResponseWriter, r *http.Request) {

@@ -325,3 +325,70 @@ Rules:
 MVP keeps data until the user deletes it.
 
 Future versions may include local retention settings.
+
+## Quick Logging Extension
+
+Quick friction events add an observed/inferred/canonical structure while keeping the original top-level fields for backwards compatibility.
+
+Additional fields on `friction_events`:
+
+```text
+input_mode
+observed
+inference
+canonical
+```
+
+`input_mode` values:
+
+```text
+quick
+advanced
+```
+
+Example quick event extension:
+
+```json
+{
+  "input_mode": "quick",
+  "observed": {
+    "occurred_at": "2026-06-04T19:26:00Z",
+    "friction_level": "orange",
+    "notes_markdown": "CI failed again after 20 min with an unclear timeout.",
+    "plain_text": "CI failed again after 20 min with an unclear timeout.",
+    "links": []
+  },
+  "inference": {
+    "engine_version": "rules-0.1",
+    "engine_type": "rules",
+    "created_at": "2026-06-04T19:26:05Z",
+    "fields": {
+      "workflow_stage": {
+        "value": "test",
+        "confidence": 0.88,
+        "source": "rules",
+        "explanation": "Matched testing, CI, pipeline, or flaky-test language."
+      }
+    }
+  },
+  "canonical": {
+    "workflow_stage": "test",
+    "friction_layer": "technical",
+    "friction_type": "failed_feedback",
+    "severity_self": 4,
+    "cognitive_load_self": 4,
+    "emotion_valence": -1,
+    "time_lost_minutes": 20,
+    "resume_time_minutes": 8,
+    "recovery_minutes": 0,
+    "interruption_count": 0,
+    "tags": ["ci", "timeout"]
+  }
+}
+```
+
+The canonical values are also copied to the existing top-level fields such as `workflow_stage`, `friction_layer`, `friction_type`, `severity_self`, `time_lost_minutes`, and `tags`. This allows existing list filters, dashboards, and math-engine scoring to work without a migration.
+
+## Local Uploaded Images
+
+Screenshots and other rich-note images are stored as local files under `LOGARIFT_UPLOAD_DIR` and served through `/uploads/{filename}`. Event notes store image URLs instead of embedding binary image bytes in MongoDB. This keeps `friction_events` documents small while preserving local-first behavior.

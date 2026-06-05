@@ -9,6 +9,7 @@ func TestLoadUsesLocalDefaults(t *testing.T) {
 	t.Setenv("LOGARIFT_MONGODB_DATABASE", "")
 	t.Setenv("LOGARIFT_MATH_ENGINE_URL", "")
 	t.Setenv("LOGARIFT_EXPORT_DIR", "")
+	t.Setenv("LOGARIFT_UPLOAD_DIR", "")
 	t.Setenv("LOGARIFT_READINESS_TIMEOUT_MS", "")
 	t.Setenv("LOGARIFT_SHUTDOWN_TIMEOUT_MS", "")
 
@@ -41,6 +42,7 @@ func TestPublicStatusDoesNotExposeMongoURI(t *testing.T) {
 		MongoDBDatabase: "logarift",
 		MathEngineURL:   "http://localhost:8090",
 		ExportDir:       "./exports",
+		UploadDir:       "./data/uploads",
 	}
 
 	status := cfg.PublicStatus()

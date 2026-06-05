@@ -38,10 +38,13 @@ services:
       LOGARIFT_MONGODB_DATABASE: logarift
       LOGARIFT_MATH_ENGINE_URL: http://math-engine:8090
       LOGARIFT_EXPORT_DIR: /var/lib/logarift/exports
+      LOGARIFT_UPLOAD_DIR: /var/lib/logarift/uploads
       LOGARIFT_READINESS_TIMEOUT_MS: 10000
       LOGARIFT_SHUTDOWN_TIMEOUT_MS: 5000
     ports:
       - "127.0.0.1:8080:8080"
+    volumes:
+      - logarift_uploads:/var/lib/logarift/uploads
     depends_on:
       mongodb:
         condition: service_healthy
@@ -63,3 +66,4 @@ services:
 
 volumes:
   logarift_mongodb_data:
+  logarift_uploads:

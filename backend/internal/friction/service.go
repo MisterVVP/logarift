@@ -8,6 +8,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/MisterVVP/logarift/backend/internal/domain"
+	"github.com/MisterVVP/logarift/backend/internal/enrichment"
 	"github.com/MisterVVP/logarift/backend/internal/ontology"
 	"github.com/MisterVVP/logarift/backend/internal/serviceerror"
 	"github.com/MisterVVP/logarift/backend/internal/store"
@@ -19,7 +20,7 @@ import (
 
 const defaultLimit int64 = 50
 const maxLimit int64 = 200
-const maxNotesRunes = 4000
+const maxNotesRunes = 20000
 const maxTags = 20
 const maxTagRunes = 64
 
@@ -31,13 +32,14 @@ func (RealClock) Now() time.Time { return time.Now().UTC() }
 type Service struct {
 	dispatcher *cqrs.Dispatcher
 	clock      Clock
+	enricher   enrichment.Engine
 }
 
 func NewService(dispatcher *cqrs.Dispatcher, clock Clock) *Service {
 	if clock == nil {
 		clock = RealClock{}
 	}
-	return &Service{dispatcher: dispatcher, clock: clock}
+	return &Service{dispatcher: dispatcher, clock: clock, enricher: enrichment.NewEngine()}
 }
 
 type Event = domain.FrictionEvent
@@ -62,6 +64,14 @@ type Request struct {
 	Source            string     `json:"source"`
 }
 
+type QuickRequest struct {
+	OccurredAt    time.Time                   `json:"occurred_at"`
+	FrictionLevel string                      `json:"friction_level"`
+	NotesMarkdown string                      `json:"notes_markdown"`
+	Links         []string                    `json:"links"`
+	Attachments   []domain.FrictionAttachment `json:"attachments"`
+}
+
 type Filter struct {
 	From, To                                                                      *time.Time
 	WorkflowStage, FrictionLayer, FrictionType, GoalID, SessionID, Source, Cursor string
@@ -70,6 +80,35 @@ type Filter struct {
 type Page struct {
 	Events     []Event
 	NextCursor string
+}
+
+func (s *Service) CreateQuick(ctx context.Context, req QuickRequest) (Event, error) {
+	fields := []serviceerror.FieldError{}
+	if req.OccurredAt.IsZero() {
+		fields = append(fields, fe("occurred_at", "is required"))
+	}
+	level := strings.ToLower(strings.TrimSpace(req.FrictionLevel))
+	if !enrichment.ValidLevel(level) {
+		fields = append(fields, fe("friction_level", "must be green, yellow, orange, or red"))
+	}
+	if strings.TrimSpace(req.NotesMarkdown) == "" {
+		fields = append(fields, fe("notes_markdown", "is required"))
+	}
+	if utf8.RuneCountInString(req.NotesMarkdown) > maxNotesRunes {
+		fields = append(fields, fe("notes_markdown", "must be at most 20000 characters"))
+	}
+	if len(req.Links) > 20 {
+		fields = append(fields, fe("links", "must contain at most 20 links"))
+	}
+	if err := serviceerror.NewValidation(fields); err != nil {
+		return Event{}, err
+	}
+	now := s.clock.Now().UTC()
+	event := s.enricher.Enrich(enrichment.Input{OccurredAt: req.OccurredAt.UTC(), FrictionLevel: level, NotesMarkdown: req.NotesMarkdown, Links: req.Links, Attachments: req.Attachments}, now)
+	if _, err := s.dispatcher.SendCommand(commands.CreateFrictionEvent{Context: ctx, Event: &event}); err != nil {
+		return Event{}, mapErr(err)
+	}
+	return event, nil
 }
 
 func (s *Service) Create(ctx context.Context, req Request) (Event, error) {
@@ -252,7 +291,7 @@ func eventFromRequest(req Request, base Event, now time.Time, create bool) (Even
 	tags, tagFields := normalizeTags(req.Tags)
 	fields = append(fields, tagFields...)
 	if utf8.RuneCountInString(req.Notes) > maxNotesRunes {
-		fields = append(fields, fe("notes", "must be at most 4000 characters"))
+		fields = append(fields, fe("notes", "must be at most 20000 characters"))
 	}
 	if err := serviceerror.NewValidation(fields); err != nil {
 		return Event{}, err
@@ -267,6 +306,7 @@ func eventFromRequest(req Request, base Event, now time.Time, create bool) (Even
 		t := base.TimestampEnd.UTC()
 		base.TimestampEnd = &t
 	}
+	base.InputMode = "advanced"
 	base.WorkflowStage = req.WorkflowStage
 	base.FrictionLayer = req.FrictionLayer
 	base.FrictionType = req.FrictionType
@@ -283,8 +323,41 @@ func eventFromRequest(req Request, base Event, now time.Time, create bool) (Even
 	base.Notes = req.Notes
 	base.Source = ontology.SourceManual
 	base.UpdatedAt = now
+	base.Observed = &domain.FrictionObserved{
+		OccurredAt:    req.TimestampStart.UTC(),
+		FrictionLevel: levelFromSeverity(req.SeveritySelf),
+		NotesMarkdown: req.Notes,
+		PlainText:     strings.TrimSpace(req.Notes),
+	}
+	base.Inference = nil
+	base.Canonical = &domain.FrictionCanonical{
+		WorkflowStage:     req.WorkflowStage,
+		FrictionLayer:     req.FrictionLayer,
+		FrictionType:      req.FrictionType,
+		SeveritySelf:      req.SeveritySelf,
+		CognitiveLoadSelf: req.CognitiveLoadSelf,
+		EmotionValence:    req.EmotionValence,
+		TimeLostMinutes:   req.TimeLostMinutes,
+		ResumeTimeMinutes: req.ResumeTimeMinutes,
+		RecoveryMinutes:   req.RecoveryMinutes,
+		InterruptionCount: req.InterruptionCount,
+		Tags:              tags,
+	}
 	return base, nil
 }
+func levelFromSeverity(severity int) string {
+	switch {
+	case severity <= 1:
+		return enrichment.LevelGreen
+	case severity == 2:
+		return enrichment.LevelYellow
+	case severity >= 5:
+		return enrichment.LevelRed
+	default:
+		return enrichment.LevelOrange
+	}
+}
+
 func normalizeTags(tags []string) ([]string, []serviceerror.FieldError) {
 	fields := []serviceerror.FieldError{}
 	seen := map[string]struct{}{}

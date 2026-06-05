@@ -74,26 +74,19 @@ curl -X POST http://localhost:8080/api/v1/work-sessions \
   -d '{"title":"Morning work","started_at":"2026-06-01T08:30:00Z"}'
 ```
 
-Create a friction event:
+Create a quick friction event using the default three-field UX contract:
 
 ```bash
-curl -X POST http://localhost:8080/api/v1/friction-events \
+curl -X POST http://localhost:8080/api/v1/friction-events/quick \
   -H "Content-Type: application/json" \
   -d '{
-    "timestamp_start":"2026-06-01T09:15:00Z",
-    "workflow_stage":"test",
-    "friction_layer":"technical",
-    "friction_type":"failed_feedback",
-    "severity_self":4,
-    "cognitive_load_self":3,
-    "emotion_valence":-1,
-    "time_lost_minutes":20,
-    "resume_time_minutes":8,
-    "interruption_count":1,
-    "tags":["ci","flaky-test"],
-    "notes":"CI failed with a test that passed locally."
+    "occurred_at":"2026-06-01T09:15:00Z",
+    "friction_level":"orange",
+    "notes_markdown":"CI failed again after 20 min with an unclear timeout. https://github.com/org/repo/actions/runs/123"
   }'
 ```
+
+The backend stores the three observed fields plus inferred and canonical fields for dashboarding and scoring. The full advanced endpoint remains available at `POST /api/v1/friction-events`.
 
 Calculate scores:
 
@@ -151,3 +144,46 @@ docker compose down
 ## Docker module download behavior
 
 The backend Dockerfile copies the backend source first and then runs `go mod download`. This is intentional: it allows Docker to generate `go.sum` inside the build stage even if the local archive has an empty `backend/go.sum`.
+
+## 8. Check rich notes upload
+
+The frontend supports the easiest path: paste a screenshot into the notes editor or click **Screenshot** and select an image.
+
+Backend upload endpoint smoke test:
+
+```bash
+base64 -d > /tmp/logarift-test.png <<'PNG'
+iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII=
+PNG
+curl -X POST http://localhost:8080/api/v1/uploads \
+  -F "file=@/tmp/logarift-test.png;type=image/png"
+```
+
+The response contains a local `url_path` such as:
+
+```json
+{
+  "url_path": "/uploads/example.png"
+}
+```
+
+Uploaded images are stored under `LOGARIFT_UPLOAD_DIR` and are served from `/uploads/{filename}`.
+
+## 9. Check math-engine logs
+
+The math engine now emits structured JSON logs. In Docker Compose, run:
+
+```bash
+docker compose logs -f math-engine
+```
+
+Then calculate scores from the dashboard or API. Expected log messages include:
+
+```text
+math engine listening
+score request received
+score calculation completed
+score request completed
+```
+
+The calculation log includes event count, period, CLA, FCI, SDC, wait minutes, active minutes, and duration.

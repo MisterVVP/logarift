@@ -140,6 +140,12 @@ Important principles:
 - original ontology, schemas, formulas, UI, docs, and implementation belong to the project
 - public scientific research may inform the system, but proprietary company work must not be copied
 
+#### 9. Quick Logging and Enrichment
+
+[product/08_quick_logging_and_enrichment.md](./product/08_quick_logging_and_enrichment.md)
+
+Defines the new three-field logging UX, color-coded friction levels, observed/inferred/canonical event model, deterministic rule engine, and future local LLM/ML extension points.
+
 ### Technical documents
 
 #### 1. CQRS Backend Architecture
@@ -147,6 +153,19 @@ Important principles:
 [technical/01_cqrs_backend_architecture.md](./technical/01_cqrs_backend_architecture.md)
 
 Defines the backend CQRS boundary used by the Go API. Services send command/query messages through one shared dispatcher; repository access is private to the Mongo store and its registered CQRS handlers.
+
+#### 2. Deterministic Enrichment Engine
+
+[technical/03_deterministic_enrichment_engine.md](./technical/03_deterministic_enrichment_engine.md)
+
+Documents the local rules engine used by `POST /api/v1/friction-events/quick` and explains how it remains separate from the C++ math engine.
+
+#### 3. Local Check Runbook
+
+[runbooks/local_check.md](./runbooks/local_check.md)
+
+Step-by-step commands for testing the backend, math engine, scoring endpoint, frontend, and Docker Compose stack.
+
 
 ## Design Constraints
 
@@ -160,6 +179,7 @@ Implementation work should preserve these constraints:
 - The MVP does not include hidden telemetry.
 - The MVP does not rank developers.
 - The MVP math is deterministic and explainable.
+- The default logging UI uses three fields and relies on local deterministic enrichment for structured fields.
 - The MVP C++ math engine is a separate service in Docker Compose and remains CLI-compatible for local deterministic tests.
 - Proprietary company taxonomies, survey wording, dashboards, and scoring systems must not be copied.
 
@@ -172,16 +192,3 @@ When adding or changing documentation:
 - preserve original project terminology unless intentionally evolving it
 - update this README when adding new documentation files
 - document major product or architecture changes before implementing them
-
-
-### 9. MVP-3 to MVP-7 Implementation Notes
-
-[technical/02_mvp_3_to_7_implementation.md](./technical/02_mvp_3_to_7_implementation.md)
-
-Describes the implemented backend CRUD APIs, C++ math engine, backend scoring integration, React + Vite frontend, and dashboard.
-
-### 10. Local Check Runbook
-
-[runbooks/local_check.md](./runbooks/local_check.md)
-
-Step-by-step commands for testing the backend, math engine, scoring endpoint, frontend, and Docker Compose stack.

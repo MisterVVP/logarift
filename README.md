@@ -13,12 +13,16 @@ Friction is a compounding signal that affects cognitive load, flow stability, an
 
 This package includes MVP-3 through MVP-7 on top of the existing MVP-0/MVP-1/MVP-2 foundation:
 
+- three-field quick friction logging with deterministic local enrichment
 - manual CRUD APIs for friction events, work goals, and work sessions
 - deterministic C++ math engine service with CLI-compatible mode
 - Go backend scoring integration over HTTP (`LOGARIFT_MATH_ENGINE_URL`)
 - persisted score snapshots
 - React + Vite local logging UI
-- dashboard cards and breakdowns
+- simplified two-tab UI: quick logging/recent logs first, dashboard second
+- rich notes editor with formatted text, links, pasted screenshots, and local image uploads
+- dashboard cards and breakdowns with tooltips
+- structured math-engine calculation logs
 - Docker Compose local stack
 
 Out of scope remains:
@@ -39,6 +43,7 @@ frontend/      React + Vite frontend
 math-engine/   C++ scoring service and CLI-compatible scorer
 docs/          Product, technical, and runbook docs
 exports/       Local export target placeholder
+data/uploads/  Local uploaded screenshots when running outside Docker
 scripts/       Convenience scripts
 ```
 
@@ -129,14 +134,30 @@ GET /health/ready
 GET /api/v1/status
 ```
 
+Uploads:
+
+```text
+POST /api/v1/uploads
+GET  /uploads/{filename}
+```
+
 Friction events:
 
 ```text
+POST   /api/v1/friction-events/quick
 POST   /api/v1/friction-events
 GET    /api/v1/friction-events
 GET    /api/v1/friction-events/{id}
 PUT    /api/v1/friction-events/{id}
 DELETE /api/v1/friction-events/{id}
+```
+
+Quick event example. The UI uses the same endpoint after uploading any pasted or attached screenshots to `/api/v1/uploads`:
+
+```bash
+curl -X POST http://localhost:8080/api/v1/friction-events/quick \
+  -H "Content-Type: application/json" \
+  -d '{"occurred_at":"2026-06-04T19:26:00Z","friction_level":"orange","notes_markdown":"CI failed again after 20 min with an unclear timeout."}'
 ```
 
 Work goals:
@@ -178,7 +199,9 @@ docs/README.md
 Useful implementation docs:
 
 ```text
+docs/product/08_quick_logging_and_enrichment.md
 docs/technical/02_mvp_3_to_7_implementation.md
+docs/technical/03_deterministic_enrichment_engine.md
 docs/runbooks/local_check.md
 math-engine/README.md
 frontend/README.md
@@ -188,7 +211,7 @@ frontend/README.md
 
 The backend uses the official MongoDB Go driver v2 package directly. No local MongoDB driver shim is included.
 
-The math engine runs as a separate C++ HTTP service in Docker Compose. The backend calls it through `LOGARIFT_MATH_ENGINE_URL`, which is `http://math-engine:8090` in Docker Compose and `http://localhost:8090` for direct local runs.
+The math engine runs as a separate C++ HTTP service in Docker Compose. The backend calls it through `LOGARIFT_MATH_ENGINE_URL`, which is `http://math-engine:8090` in Docker Compose and `http://localhost:8090` for direct local runs. The math engine writes structured JSON logs for server startup, score requests, calculation summaries, status, duration, event count, CLA, FCI, SDC, wait minutes, and active minutes.
 
 When setting up a fresh checkout, run:
 

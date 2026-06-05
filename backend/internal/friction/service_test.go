@@ -114,3 +114,26 @@ func TestGetMapsNotFound(t *testing.T) {
 		t.Fatalf("expected service not found, got %v", err)
 	}
 }
+
+func TestCreateQuickEnrichesAndPersistsCanonicalFields(t *testing.T) {
+	now := time.Date(2026, 6, 4, 22, 0, 0, 0, time.UTC)
+	repo := &fakeRepo{}
+	svc := NewService(dispatcherForRepo(t, repo), fixedClock{now})
+	got, err := svc.CreateQuick(context.Background(), QuickRequest{
+		OccurredAt:    now.Add(-30 * time.Minute),
+		FrictionLevel: "red",
+		NotesMarkdown: "PR review blocked me for 1h while waiting for approval.",
+	})
+	if err != nil {
+		t.Fatalf("CreateQuick() error: %v", err)
+	}
+	if got.InputMode != "quick" || got.Observed == nil || got.Inference == nil || got.Canonical == nil {
+		t.Fatalf("quick metadata not populated: %#v", got)
+	}
+	if got.FrictionType != "waiting_for_review" || got.WorkflowStage != "code_review" {
+		t.Fatalf("unexpected inference: %s %s", got.WorkflowStage, got.FrictionType)
+	}
+	if got.TimeLostMinutes != 60 {
+		t.Fatalf("expected 60 minutes from 1h note, got %d", got.TimeLostMinutes)
+	}
+}

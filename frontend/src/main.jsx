@@ -1,13 +1,15 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 
 const API_BASE = import.meta.env.VITE_LOGARIFT_API_BASE_URL || 'http://localhost:8080';
-
-const workflowStages = ['planning', 'local_development', 'build', 'test', 'code_review', 'merge', 'deployment', 'operation', 'debugging', 'documentation', 'coordination', 'learning'];
-const frictionLayers = ['technical', 'temporal', 'cognitive', 'social_process', 'motivational', 'environmental'];
-const frictionTypes = ['slow_feedback', 'failed_feedback', 'unclear_error', 'missing_documentation', 'ambiguous_ownership', 'interruption', 'waiting_for_review', 'waiting_for_ci', 'context_switch', 'rework', 'tooling_failure', 'environment_setup', 'coordination_overhead', 'decision_blocked'];
 const goalStatuses = ['active', 'completed', 'deferred', 'abandoned'];
+const levels = [
+  { value: 'green', label: 'Papercut', description: 'Small annoyance', tooltip: 'Use green when the friction was visible but did not break flow.' },
+  { value: 'yellow', label: 'Annoying', description: 'Meaningful slowdown', tooltip: 'Use yellow when the issue slowed you down but you kept moving.' },
+  { value: 'orange', label: 'Disruptive', description: 'Lost flow or time', tooltip: 'Use orange when the issue broke flow, caused rework, or cost meaningful time.' },
+  { value: 'red', label: 'Blocked', description: 'Could not progress', tooltip: 'Use red when the issue blocked progress or caused high frustration.' },
+];
 
 function nowLocalInput() {
   const date = new Date();
@@ -19,10 +21,15 @@ function toApiTime(local) {
   return new Date(local).toISOString();
 }
 
+function defaultHeaders(options) {
+  if (options.body instanceof FormData) return options.headers || {};
+  return { 'Content-Type': 'application/json', ...(options.headers || {}) };
+}
+
 async function api(path, options = {}) {
   const response = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
     ...options,
+    headers: defaultHeaders(options),
   });
   if (response.status === 204) return null;
   const text = await response.text();
@@ -34,66 +41,209 @@ async function api(path, options = {}) {
   return data;
 }
 
-function Select({ label, value, onChange, values }) {
+function stripHtml(html) {
+  const div = document.createElement('div');
+  div.innerHTML = html || '';
+  return div.textContent || div.innerText || '';
+}
+
+function sanitizeRichHtml(html) {
+  const allowedTags = new Set(['A', 'B', 'BR', 'CODE', 'DIV', 'EM', 'I', 'IMG', 'LI', 'OL', 'P', 'PRE', 'SPAN', 'STRONG', 'UL']);
+  const allowedAttrs = {
+    A: new Set(['href', 'title', 'target', 'rel']),
+    IMG: new Set(['src', 'alt', 'title']),
+  };
+  const doc = new DOMParser().parseFromString(`<div>${html || ''}</div>`, 'text/html');
+  const root = doc.body.firstElementChild;
+
+  function clean(node) {
+    for (const child of [...node.childNodes]) {
+      if (child.nodeType === Node.ELEMENT_NODE) {
+        if (!allowedTags.has(child.tagName)) {
+          child.replaceWith(...child.childNodes);
+          continue;
+        }
+        for (const attr of [...child.attributes]) {
+          const allowed = allowedAttrs[child.tagName]?.has(attr.name.toLowerCase()) || false;
+          if (!allowed) child.removeAttribute(attr.name);
+        }
+        if (child.tagName === 'A') {
+          const href = child.getAttribute('href') || '';
+          if (!href.startsWith('http://') && !href.startsWith('https://') && !href.startsWith('/uploads/')) {
+            child.removeAttribute('href');
+          } else {
+            child.setAttribute('target', '_blank');
+            child.setAttribute('rel', 'noreferrer');
+          }
+        }
+        if (child.tagName === 'IMG') {
+          const src = child.getAttribute('src') || '';
+          if (!src.startsWith('http://') && !src.startsWith('https://') && !src.startsWith('/uploads/')) {
+            child.remove();
+            continue;
+          }
+        }
+        clean(child);
+      }
+    }
+  }
+
+  clean(root);
+  return root.innerHTML;
+}
+
+function InfoTip({ text }) {
+  return <span className="info-tip" title={text} aria-label={text}>?</span>;
+}
+
+function FieldLabel({ children, tooltip }) {
   return (
-    <label>
-      <span>{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>
-        {values.map((v) => <option key={v} value={v}>{v}</option>)}
-      </select>
-    </label>
+    <span className="field-label">
+      {children}
+      {tooltip && <InfoTip text={tooltip} />}
+    </span>
   );
 }
 
-function NumberInput({ label, value, min, max, onChange }) {
+function RichNotesEditor({ value, onChange }) {
+  const editorRef = useRef(null);
+  const fileRef = useRef(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState('');
+
+  useEffect(() => {
+    if (editorRef.current && editorRef.current.innerHTML !== value) {
+      editorRef.current.innerHTML = value;
+    }
+  }, [value]);
+
+  function sync() {
+    onChange(sanitizeRichHtml(editorRef.current?.innerHTML || ''));
+  }
+
+  function exec(command) {
+    editorRef.current?.focus();
+    document.execCommand(command, false, null);
+    sync();
+  }
+
+  function insertHTML(html) {
+    editorRef.current?.focus();
+    document.execCommand('insertHTML', false, html);
+    sync();
+  }
+
+  function addLink() {
+    const url = window.prompt('Paste URL');
+    if (!url) return;
+    const safeURL = url.trim();
+    if (!safeURL.startsWith('http://') && !safeURL.startsWith('https://')) {
+      setUploadError('Only http/https links are accepted.');
+      return;
+    }
+    insertHTML(`<a href="${safeURL}" target="_blank" rel="noreferrer">${safeURL}</a>`);
+  }
+
+  async function uploadImage(file) {
+    if (!file || !file.type.startsWith('image/')) return;
+    setUploading(true);
+    setUploadError('');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      const uploaded = await api('/api/v1/uploads', { method: 'POST', body: formData });
+      const url = `${API_BASE}${uploaded.url_path}`;
+      const alt = uploaded.filename || 'screenshot';
+      insertHTML(`<p><img src="${url}" alt="${alt}" title="${alt}"></p>`);
+    } catch (err) {
+      setUploadError(err.message);
+    } finally {
+      setUploading(false);
+    }
+  }
+
+  async function uploadFiles(files) {
+    for (const file of [...files]) {
+      await uploadImage(file);
+    }
+  }
+
+  function onPaste(e) {
+    const imageFiles = [...(e.clipboardData?.files || [])].filter((file) => file.type.startsWith('image/'));
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      uploadFiles(imageFiles);
+    }
+  }
+
+  function onDrop(e) {
+    const imageFiles = [...(e.dataTransfer?.files || [])].filter((file) => file.type.startsWith('image/'));
+    if (imageFiles.length > 0) {
+      e.preventDefault();
+      uploadFiles(imageFiles);
+    }
+  }
+
   return (
-    <label>
-      <span>{label}</span>
-      <input type="number" min={min} max={max} value={value} onChange={(e) => onChange(Number(e.target.value))} />
-    </label>
+    <div className="rich-editor-shell">
+      <div className="editor-toolbar" aria-label="Rich notes toolbar">
+        <button type="button" title="Bold selected text" onClick={() => exec('bold')}>Bold</button>
+        <button type="button" title="Italic selected text" onClick={() => exec('italic')}>Italic</button>
+        <button type="button" title="Insert a clickable link" onClick={addLink}>Link</button>
+        <button type="button" title="Upload or attach a local screenshot" onClick={() => fileRef.current?.click()} disabled={uploading}>
+          {uploading ? 'Uploading…' : 'Screenshot'}
+        </button>
+        <input ref={fileRef} className="hidden-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" multiple onChange={(e) => uploadFiles(e.target.files || [])} />
+      </div>
+      <div
+        ref={editorRef}
+        className="rich-editor"
+        contentEditable
+        role="textbox"
+        aria-multiline="true"
+        title="Write notes, paste links, paste screenshots from clipboard, or click Screenshot to upload images."
+        data-placeholder="Example: CI failed again after 20 min with an unclear timeout. Paste links or screenshots here."
+        onInput={sync}
+        onBlur={sync}
+        onPaste={onPaste}
+        onDrop={onDrop}
+        suppressContentEditableWarning
+      />
+      <div className="editor-help">
+        <span>Supports formatted text, links, drag/drop images, file upload, and pasted screenshots.</span>
+        {uploadError && <span className="editor-error">{uploadError}</span>}
+      </div>
+    </div>
   );
 }
 
-function EventForm({ goals, sessions, onCreated }) {
-  const [form, setForm] = useState({
-    timestamp_start: nowLocalInput(),
-    workflow_stage: 'test',
-    friction_layer: 'technical',
-    friction_type: 'failed_feedback',
-    severity_self: 3,
-    cognitive_load_self: 3,
-    emotion_valence: -1,
-    time_lost_minutes: 10,
-    resume_time_minutes: 5,
-    recovery_minutes: 0,
-    interruption_count: 0,
-    goal_id: '',
-    session_id: '',
-    tags: '',
-    notes: '',
-  });
+function EventComposer({ onCreated }) {
+  const [occurredAt, setOccurredAt] = useState(nowLocalInput());
+  const [level, setLevel] = useState('yellow');
+  const [notes, setNotes] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
-
-  function patch(key, value) {
-    setForm((old) => ({ ...old, [key]: value }));
-  }
+  const [lastEvent, setLastEvent] = useState(null);
 
   async function submit(e) {
     e.preventDefault();
+    const cleanNotes = sanitizeRichHtml(notes);
+    if (stripHtml(cleanNotes).trim() === '' && !cleanNotes.includes('<img')) {
+      setError('Notes are required. Describe what happened or attach a screenshot.');
+      return;
+    }
     setBusy(true);
     setError('');
     try {
       const payload = {
-        ...form,
-        timestamp_start: toApiTime(form.timestamp_start),
-        tags: form.tags.split(',').map((t) => t.trim()).filter(Boolean),
+        occurred_at: toApiTime(occurredAt),
+        friction_level: level,
+        notes_markdown: cleanNotes,
       };
-      if (!payload.goal_id) delete payload.goal_id;
-      if (!payload.session_id) delete payload.session_id;
-      await api('/api/v1/friction-events', { method: 'POST', body: JSON.stringify(payload) });
-      patch('notes', '');
-      patch('tags', '');
+      const result = await api('/api/v1/friction-events/quick', { method: 'POST', body: JSON.stringify(payload) });
+      setLastEvent(result.event);
+      setNotes('');
+      setOccurredAt(nowLocalInput());
       onCreated();
     } catch (err) {
       setError(err.message);
@@ -103,52 +253,80 @@ function EventForm({ goals, sessions, onCreated }) {
   }
 
   return (
-    <section className="card wide">
-      <h2>Log friction</h2>
-      <form onSubmit={submit} className="grid-form">
-        <label>
-          <span>Started</span>
-          <input type="datetime-local" value={form.timestamp_start} onChange={(e) => patch('timestamp_start', e.target.value)} required />
+    <section className="card composer-card">
+      <div className="composer-heading">
+        <div>
+          <h2>Log friction</h2>
+          <p>Three fields only. Logarift infers workflow, layer, type, time loss, and tags locally with deterministic rules.</p>
+        </div>
+        <span className="pill subtle" title="Only date, color, and notes are required.">3 fields</span>
+      </div>
+      <form onSubmit={submit} className="composer-form">
+        <label className="date-field">
+          <FieldLabel tooltip="When the friction happened. Defaults to now so logging stays fast.">When?</FieldLabel>
+          <input type="datetime-local" value={occurredAt} onChange={(e) => setOccurredAt(e.target.value)} required title="Timestamp for this friction log." />
         </label>
-        <Select label="Workflow" value={form.workflow_stage} onChange={(v) => patch('workflow_stage', v)} values={workflowStages} />
-        <Select label="Layer" value={form.friction_layer} onChange={(v) => patch('friction_layer', v)} values={frictionLayers} />
-        <Select label="Type" value={form.friction_type} onChange={(v) => patch('friction_type', v)} values={frictionTypes} />
-        <NumberInput label="Severity" min="1" max="5" value={form.severity_self} onChange={(v) => patch('severity_self', v)} />
-        <NumberInput label="Cognitive load" min="1" max="5" value={form.cognitive_load_self} onChange={(v) => patch('cognitive_load_self', v)} />
-        <NumberInput label="Emotion valence" min="-2" max="2" value={form.emotion_valence} onChange={(v) => patch('emotion_valence', v)} />
-        <NumberInput label="Time lost, min" min="0" value={form.time_lost_minutes} onChange={(v) => patch('time_lost_minutes', v)} />
-        <NumberInput label="Resume time, min" min="0" value={form.resume_time_minutes} onChange={(v) => patch('resume_time_minutes', v)} />
-        <NumberInput label="Interruptions" min="0" value={form.interruption_count} onChange={(v) => patch('interruption_count', v)} />
-        <label>
-          <span>Goal</span>
-          <select value={form.goal_id} onChange={(e) => patch('goal_id', e.target.value)}>
-            <option value="">None</option>
-            {goals.map((goal) => <option key={goal.id} value={goal.id}>{goal.title}</option>)}
-          </select>
+
+        <fieldset className="level-picker">
+          <legend><FieldLabel tooltip="A simple color frustration score. The backend maps it to severity, cognitive load, and emotion valence.">How bad was it?</FieldLabel></legend>
+          <div className="level-options">
+            {levels.map((option) => (
+              <button
+                type="button"
+                key={option.value}
+                className={`level-button ${option.value} ${level === option.value ? 'selected' : ''}`}
+                onClick={() => setLevel(option.value)}
+                aria-pressed={level === option.value}
+                title={option.tooltip}
+              >
+                <span className="level-dot" />
+                <strong>{option.label}</strong>
+                <small>{option.description}</small>
+              </button>
+            ))}
+          </div>
+        </fieldset>
+
+        <label className="notes-field">
+          <FieldLabel tooltip="Write what happened. Links and screenshots help the deterministic rules infer better metadata.">Notes</FieldLabel>
+          <RichNotesEditor value={notes} onChange={setNotes} />
         </label>
-        <label>
-          <span>Session</span>
-          <select value={form.session_id} onChange={(e) => patch('session_id', e.target.value)}>
-            <option value="">None</option>
-            {sessions.map((session) => <option key={session.id} value={session.id}>{session.title}</option>)}
-          </select>
-        </label>
-        <label className="full">
-          <span>Tags, comma-separated</span>
-          <input value={form.tags} onChange={(e) => patch('tags', e.target.value)} placeholder="ci, flaky-test" />
-        </label>
-        <label className="full">
-          <span>Notes</span>
-          <textarea value={form.notes} onChange={(e) => patch('notes', e.target.value)} placeholder="What happened?" />
-        </label>
+
         {error && <p className="error full">{error}</p>}
-        <button className="primary" disabled={busy}>{busy ? 'Saving…' : 'Save event'}</button>
+        <button className="primary composer-submit" disabled={busy} title="Save the friction log and run local deterministic enrichment.">{busy ? 'Saving…' : 'Save friction'}</button>
       </form>
+      {lastEvent && <InferencePreview event={lastEvent} />}
     </section>
   );
 }
 
-function GoalSessionPanel({ onChanged }) {
+function InferencePreview({ event }) {
+  return (
+    <div className="inference-preview" title="These fields were inferred locally from the color and notes. They can be corrected later in advanced editing.">
+      <div>
+        <strong>Inferred locally</strong>
+        <p>{event.workflow_stage} · {event.friction_layer} · {event.friction_type} · ~{event.time_lost_minutes} min lost</p>
+      </div>
+      <ConfidenceBadge event={event} />
+    </div>
+  );
+}
+
+function ConfidenceBadge({ event }) {
+  const confidence = averageConfidence(event);
+  if (confidence === null) return <span className="pill subtle" title="This event was created through advanced/manual fields.">advanced</span>;
+  return <span className="pill" title="Average confidence of locally inferred fields.">{Math.round(confidence * 100)}% confidence</span>;
+}
+
+function averageConfidence(event) {
+  const fields = event?.inference?.fields;
+  if (!fields) return null;
+  const values = Object.values(fields).map((field) => Number(field.confidence)).filter((value) => Number.isFinite(value));
+  if (!values.length) return null;
+  return values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function GoalSessionPanel({ onChanged, onClose }) {
   const [goalTitle, setGoalTitle] = useState('');
   const [goalStatus, setGoalStatus] = useState('active');
   const [sessionTitle, setSessionTitle] = useState('');
@@ -175,21 +353,47 @@ function GoalSessionPanel({ onChanged }) {
   }
 
   return (
-    <section className="card">
-      <h2>Goals & sessions</h2>
-      <form onSubmit={createGoal} className="mini-form">
-        <input value={goalTitle} onChange={(e) => setGoalTitle(e.target.value)} placeholder="New goal" />
-        <select value={goalStatus} onChange={(e) => setGoalStatus(e.target.value)}>
-          {goalStatuses.map((s) => <option key={s}>{s}</option>)}
-        </select>
-        <button>Create goal</button>
-      </form>
-      <form onSubmit={createSession} className="mini-form">
-        <input value={sessionTitle} onChange={(e) => setSessionTitle(e.target.value)} placeholder="New session" />
-        <button>Create session</button>
-      </form>
-      {error && <p className="error">{error}</p>}
-    </section>
+    <div className="modal-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="card modal-card" role="dialog" aria-modal="true" aria-labelledby="context-title" onMouseDown={(e) => e.stopPropagation()}>
+        <div className="section-heading">
+          <div>
+            <h2 id="context-title">Optional context</h2>
+            <p className="muted">Goals and sessions are optional. They stay out of the main logging flow.</p>
+          </div>
+          <button type="button" title="Close optional context" onClick={onClose}>Close</button>
+        </div>
+        <form onSubmit={createGoal} className="mini-form">
+          <label>
+            <FieldLabel tooltip="A goal is a meaningful work outcome, such as fixing a bug or implementing a feature.">New goal</FieldLabel>
+            <input value={goalTitle} onChange={(e) => setGoalTitle(e.target.value)} placeholder="Implement dashboard filters" title="Goal title" />
+          </label>
+          <label>
+            <FieldLabel tooltip="Goal status is optional metadata for later filtering.">Goal status</FieldLabel>
+            <select value={goalStatus} onChange={(e) => setGoalStatus(e.target.value)} title="Goal status">
+              {goalStatuses.map((s) => <option key={s}>{s}</option>)}
+            </select>
+          </label>
+          <button title="Create a work goal">Create goal</button>
+        </form>
+        <form onSubmit={createSession} className="mini-form">
+          <label>
+            <FieldLabel tooltip="A session is a bounded block of work. Quick logging does not require selecting one.">New session</FieldLabel>
+            <input value={sessionTitle} onChange={(e) => setSessionTitle(e.target.value)} placeholder="Morning debugging" title="Session title" />
+          </label>
+          <button title="Create a work session starting now">Create session</button>
+        </form>
+        {error && <p className="error">{error}</p>}
+      </section>
+    </div>
+  );
+}
+
+function Metric({ value, label, tooltip }) {
+  return (
+    <div className="metric" title={tooltip}>
+      <strong>{value}</strong>
+      <span>{label} <InfoTip text={tooltip} /></span>
+    </div>
   );
 }
 
@@ -199,43 +403,61 @@ function Dashboard({ events, snapshots, onCalculate }) {
     const byType = {};
     let time = 0;
     let cognitive = 0;
+    let inferred = 0;
+    let confidenceSum = 0;
     for (const event of events) {
       time += event.time_lost_minutes || 0;
       cognitive += event.cognitive_load_self || 0;
       byLayer[event.friction_layer] = (byLayer[event.friction_layer] || 0) + 1;
       byType[event.friction_type] = (byType[event.friction_type] || 0) + (event.time_lost_minutes || 0);
+      const confidence = averageConfidence(event);
+      if (confidence !== null) {
+        inferred += 1;
+        confidenceSum += confidence;
+      }
     }
-    return { time, avgCognitive: events.length ? (cognitive / events.length).toFixed(1) : '0.0', byLayer, byType };
+    return {
+      time,
+      avgCognitive: events.length ? (cognitive / events.length).toFixed(1) : '0.0',
+      byLayer,
+      byType,
+      inferred,
+      avgConfidence: inferred ? `${Math.round((confidenceSum / inferred) * 100)}%` : '—',
+    };
   }, [events]);
   const latest = snapshots[0];
 
   return (
-    <section className="card wide">
+    <section className="card dashboard-card">
       <div className="section-heading">
-        <h2>Dashboard</h2>
-        <button onClick={onCalculate}>Calculate current scores</button>
+        <div>
+          <h2>Dashboard</h2>
+          <p className="muted">Analytics are separated from logging so the first screen remains fast.</p>
+        </div>
+        <button onClick={onCalculate} title="Ask the Go API to send current events to the C++ math-engine service and store a score snapshot.">Calculate current scores</button>
       </div>
       <div className="cards-row">
-        <div className="metric"><strong>{events.length}</strong><span>events</span></div>
-        <div className="metric"><strong>{totals.time}</strong><span>minutes lost</span></div>
-        <div className="metric"><strong>{totals.avgCognitive}</strong><span>avg cognitive load</span></div>
-        <div className="metric"><strong>{latest?.scores?.cla?.toFixed?.(1) ?? '—'}</strong><span>CLA</span></div>
-        <div className="metric"><strong>{latest?.scores?.fci?.toFixed?.(1) ?? '—'}</strong><span>FCI</span></div>
-        <div className="metric"><strong>{latest?.scores?.sdc?.toFixed?.(2) ?? '—'}</strong><span>SDC</span></div>
+        <Metric value={events.length} label="events" tooltip="Number of friction logs currently loaded in the dashboard." />
+        <Metric value={totals.time} label="minutes lost" tooltip="Sum of estimated or observed time_lost_minutes across loaded events." />
+        <Metric value={totals.avgCognitive} label="avg cognitive load" tooltip="Average self or inferred cognitive-load score. 1 is low effort; 5 is exhausting or deeply confusing." />
+        <Metric value={totals.avgConfidence} label="avg inference confidence" tooltip="Average confidence for fields inferred by the deterministic local rules engine." />
+        <Metric value={latest?.scores?.cla?.toFixed?.(1) ?? '—'} label="CLA" tooltip="Cognitive Load Accumulator. A decayed score estimating accumulated mental pressure from severity, cognitive load, interruptions, resume time, and recovery." />
+        <Metric value={latest?.scores?.fci?.toFixed?.(1) ?? '—'} label="FCI" tooltip="Friction Compounding Index. A time-decayed score estimating whether friction events cluster and compound near the scoring period end." />
+        <Metric value={latest?.scores?.sdc?.toFixed?.(2) ?? '—'} label="SDC" tooltip="Systemic Drag Coefficient. Wait-like friction time divided by active work time; higher means more recorded waiting burden." />
       </div>
       <div className="analytics-grid">
-        <Breakdown title="Events by layer" data={totals.byLayer} />
-        <Breakdown title="Time lost by type" data={totals.byType} suffix=" min" />
+        <Breakdown title="Events by layer" tooltip="Friction layer is inferred from notes, for example technical, temporal, cognitive, or social/process." data={totals.byLayer} />
+        <Breakdown title="Time lost by type" tooltip="Friction type is a more specific classification, such as failed_feedback or waiting_for_review." data={totals.byType} suffix=" min" />
       </div>
     </section>
   );
 }
 
-function Breakdown({ title, data, suffix = '' }) {
+function Breakdown({ title, tooltip, data, suffix = '' }) {
   const entries = Object.entries(data).sort((a, b) => b[1] - a[1]).slice(0, 8);
   return (
-    <div className="breakdown">
-      <h3>{title}</h3>
+    <div className="breakdown" title={tooltip}>
+      <h3>{title} <InfoTip text={tooltip} /></h3>
       {entries.length === 0 && <p className="muted">No data yet.</p>}
       {entries.map(([key, value]) => (
         <div key={key} className="bar-row">
@@ -249,18 +471,24 @@ function Breakdown({ title, data, suffix = '' }) {
 
 function Timeline({ events }) {
   return (
-    <section className="card wide">
-      <h2>Recent friction events</h2>
-      {events.length === 0 && <p className="muted">No friction events yet.</p>}
+    <section className="card recent-card">
+      <h2>Recent logs</h2>
+      {events.length === 0 && <p className="muted">No friction logs yet.</p>}
       <div className="timeline">
-        {events.map((event) => (
-          <article key={event.id} className="event-item">
-            <div>
-              <strong>{event.friction_type}</strong>
-              <p>{event.workflow_stage} · {event.friction_layer} · severity {event.severity_self} · load {event.cognitive_load_self}</p>
-              {event.notes && <p>{event.notes}</p>}
+        {events.slice(0, 12).map((event) => (
+          <article key={event.id} className={`event-item level-${event.observed?.friction_level || 'advanced'}`} title="A recent friction log with canonical fields inferred for analytics.">
+            <div className="event-main">
+              <div className="event-title-row">
+                <strong>{event.friction_type}</strong>
+                <ConfidenceBadge event={event} />
+              </div>
+              <p title="Inferred canonical metadata used by charts and scoring.">{event.workflow_stage} · {event.friction_layer} · severity {event.severity_self} · load {event.cognitive_load_self}</p>
+              {event.notes && <div className="event-notes" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(event.notes) }} />}
+              {event.tags?.length > 0 && (
+                <div className="tag-row" title="Tags inferred from notes and links.">{event.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
+              )}
             </div>
-            <time>{new Date(event.timestamp_start).toLocaleString()}</time>
+            <time title="When the friction was recorded as happening.">{new Date(event.timestamp_start).toLocaleString()}</time>
           </article>
         ))}
       </div>
@@ -275,6 +503,8 @@ function App() {
   const [snapshots, setSnapshots] = useState([]);
   const [status, setStatus] = useState('loading');
   const [error, setError] = useState('');
+  const [activeTab, setActiveTab] = useState('log');
+  const [contextOpen, setContextOpen] = useState(false);
 
   async function refresh() {
     setError('');
@@ -317,16 +547,30 @@ function App() {
           <h1>Logarift</h1>
           <p>Local-first Developer Experience friction logging and analysis.</p>
         </div>
-        <button onClick={refresh}>Refresh</button>
+        <div className="header-actions">
+          <button onClick={() => setContextOpen(true)} title="Create optional goals or sessions in a modal. This does not interrupt quick logging.">Optional context</button>
+          <button onClick={refresh} title="Reload backend status, recent logs, goals, sessions, and score snapshots.">Refresh</button>
+        </div>
       </header>
-      <p className={`status ${status}`}>Backend status: {status}</p>
+
+      <nav className="tabs" aria-label="Main sections">
+        <button className={activeTab === 'log' ? 'active' : ''} onClick={() => setActiveTab('log')} title="Fast friction logging and recent logs.">Log</button>
+        <button className={activeTab === 'dashboard' ? 'active' : ''} onClick={() => setActiveTab('dashboard')} title="Analytics, score cards, and breakdowns.">Dashboard</button>
+      </nav>
+
+      <p className={`status ${status}`} title="Backend readiness based on the API status endpoint.">Backend status: {status}</p>
       {error && <p className="error">{error}</p>}
-      <div className="layout">
-        <EventForm goals={goals} sessions={sessions} onCreated={refresh} />
-        <GoalSessionPanel onChanged={refresh} />
-        <Dashboard events={events} snapshots={snapshots} onCalculate={calculateScores} />
-        <Timeline events={events} />
-      </div>
+
+      {activeTab === 'log' && (
+        <div className="single-column">
+          <EventComposer onCreated={refresh} />
+          <Timeline events={events} />
+        </div>
+      )}
+
+      {activeTab === 'dashboard' && <Dashboard events={events} snapshots={snapshots} onCalculate={calculateScores} />}
+
+      {contextOpen && <GoalSessionPanel goals={goals} sessions={sessions} onChanged={refresh} onClose={() => setContextOpen(false)} />}
     </main>
   );
 }

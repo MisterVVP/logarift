@@ -1,4 +1,6 @@
 #include <algorithm>
+#include <atomic>
+#include <chrono>
 #include <arpa/inet.h>
 #include <cerrno>
 #include <cmath>
@@ -6,6 +8,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <ctime>
+#include <cctype>
 #include <iomanip>
 #include <iostream>
 #include <map>
@@ -30,6 +33,7 @@ struct Event {
 };
 
 static volatile std::sig_atomic_t stop_requested = 0;
+static std::atomic<unsigned long long> request_counter{0};
 
 static void handle_signal(int) {
     stop_requested = 1;
@@ -59,6 +63,37 @@ static std::string escape_json(const std::string &value) {
 
 static std::string error_json(const std::string &code, const std::string &message) {
     return "{\"error\":{\"code\":\"" + escape_json(code) + "\",\"message\":\"" + escape_json(message) + "\"}}\n";
+}
+
+static std::string utc_now_iso() {
+    std::time_t now = std::time(nullptr);
+    std::tm tm{};
+#if defined(_WIN32)
+    gmtime_s(&tm, &now);
+#else
+    gmtime_r(&now, &tm);
+#endif
+    char buffer[32];
+    std::strftime(buffer, sizeof(buffer), "%Y-%m-%dT%H:%M:%SZ", &tm);
+    return std::string(buffer);
+}
+
+static std::string format_double(double value) {
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(4) << value;
+    return out.str();
+}
+
+static void log_json(const std::string &level, const std::string &message,
+                     const std::map<std::string, std::string> &fields = {}) {
+    std::ostringstream out;
+    out << "{\"timestamp\":\"" << utc_now_iso() << "\",\"level\":\"" << escape_json(level)
+        << "\",\"service\":\"logarift-math-engine\",\"message\":\"" << escape_json(message) << "\"";
+    for (const auto &entry : fields) {
+        out << ",\"" << escape_json(entry.first) << "\":\"" << escape_json(entry.second) << "\"";
+    }
+    out << "}";
+    std::cerr << out.str() << std::endl;
 }
 
 static size_t skip_ws(const std::string &s, size_t pos) {
@@ -268,9 +303,11 @@ struct EventScore {
 };
 
 static std::string score_json(const std::string &input) {
+    auto calculation_started = std::chrono::steady_clock::now();
     std::string period_start = find_string(input, "period_start");
     std::string period_end = find_string(input, "period_end");
     if (period_start.empty() || period_end.empty()) {
+        log_json("warn", "score calculation rejected", {{"reason", "missing_period"}, {"payload_bytes", std::to_string(input.size())}});
         return error_json("invalid_input", "period_start and period_end are required");
     }
 
@@ -337,6 +374,20 @@ static std::string score_json(const std::string &input) {
     });
 
     double sdc = total_wait_time / std::max(total_active_time, 1.0);
+    auto calculation_finished = std::chrono::steady_clock::now();
+    auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(calculation_finished - calculation_started).count();
+    log_json("info", "score calculation completed", {
+        {"period_start", period_start},
+        {"period_end", period_end},
+        {"event_count", std::to_string(events.size())},
+        {"top_contributor_count", std::to_string(std::min<size_t>(5, event_scores.size()))},
+        {"total_wait_minutes", format_double(total_wait_time)},
+        {"total_active_minutes", format_double(total_active_time)},
+        {"cla", format_double(cla)},
+        {"fci", format_double(fci)},
+        {"sdc", format_double(sdc)},
+        {"duration_ms", std::to_string(duration_ms)}
+    });
 
     std::ostringstream out;
     out << std::fixed << std::setprecision(4);
@@ -436,6 +487,7 @@ static void handle_client(int fd) {
             if (errno == EINTR) {
                 continue;
             }
+            log_json("warn", "HTTP request read failed", {{"error", std::strerror(errno)}});
             send_http_response(fd, 400, error_json("bad_request", "failed to read request"));
             return;
         }
@@ -449,6 +501,7 @@ static void handle_client(int fd) {
         }
     }
     if (header_end == std::string::npos) {
+        log_json("warn", "HTTP request rejected", {{"reason", "missing_headers"}});
         send_http_response(fd, 400, error_json("bad_request", "missing HTTP headers"));
         return;
     }
@@ -500,8 +553,14 @@ static void handle_client(int fd) {
         return;
     }
     if (path == "/v1/score" && method == "POST") {
+        unsigned long long request_id = ++request_counter;
+        auto request_started = std::chrono::steady_clock::now();
+        log_json("info", "score request received", {{"request_id", std::to_string(request_id)}, {"payload_bytes", std::to_string(body.size())}});
         std::string output = score_json(body);
         int status = output.find("\"error\"") != std::string::npos ? 400 : 200;
+        auto request_finished = std::chrono::steady_clock::now();
+        auto duration_ms = std::chrono::duration_cast<std::chrono::milliseconds>(request_finished - request_started).count();
+        log_json(status == 200 ? "info" : "warn", "score request completed", {{"request_id", std::to_string(request_id)}, {"status", std::to_string(status)}, {"duration_ms", std::to_string(duration_ms)}});
         send_http_response(fd, status, output);
         return;
     }
@@ -588,7 +647,7 @@ static int serve() {
         return 1;
     }
 
-    std::cout << "logarift math engine listening on port " << port << "\n";
+    log_json("info", "math engine listening", {{"port", std::to_string(port)}});
     while (!stop_requested) {
         sockaddr_in client_address{};
         socklen_t client_len = sizeof(client_address);
@@ -597,12 +656,13 @@ static int serve() {
             if (errno == EINTR) {
                 continue;
             }
-            std::cerr << "accept failed: " << std::strerror(errno) << "\n";
+            log_json("error", "accept failed", {{"error", std::strerror(errno)}});
             continue;
         }
         handle_client(client_fd);
         close(client_fd);
     }
+    log_json("info", "math engine stopped");
     close(server_fd);
     return 0;
 }

@@ -17,6 +17,7 @@ const (
 	defaultMongoDBDatabase         = "logarift"
 	defaultMathEngineURL           = "http://localhost:8090"
 	defaultExportDir               = "./exports"
+	defaultUploadDir               = "./data/uploads"
 	defaultReadinessTimeoutMS      = 2000
 	defaultShutdownTimeoutMS       = 5000
 	defaultMongoDBConnectTimeoutMS = 5000
@@ -30,6 +31,7 @@ type Config struct {
 	MongoDBDatabase       string
 	MathEngineURL         string
 	ExportDir             string
+	UploadDir             string
 	ReadinessTimeout      time.Duration
 	ShutdownTimeout       time.Duration
 	MongoDBConnectTimeout time.Duration
@@ -46,6 +48,7 @@ func Load() (Config, error) {
 		MongoDBDatabase:       getenv("LOGARIFT_MONGODB_DATABASE", defaultMongoDBDatabase),
 		MathEngineURL:         getenv("LOGARIFT_MATH_ENGINE_URL", defaultMathEngineURL),
 		ExportDir:             getenv("LOGARIFT_EXPORT_DIR", defaultExportDir),
+		UploadDir:             getenv("LOGARIFT_UPLOAD_DIR", defaultUploadDir),
 		ReadinessTimeout:      time.Duration(defaultReadinessTimeoutMS) * time.Millisecond,
 		ShutdownTimeout:       time.Duration(defaultShutdownTimeoutMS) * time.Millisecond,
 		MongoDBConnectTimeout: time.Duration(defaultMongoDBConnectTimeoutMS) * time.Millisecond,
@@ -105,6 +108,9 @@ func (c Config) Validate() error {
 	if c.ExportDir == "" {
 		return errors.New("LOGARIFT_EXPORT_DIR must not be empty")
 	}
+	if c.UploadDir == "" {
+		return errors.New("LOGARIFT_UPLOAD_DIR must not be empty")
+	}
 	if c.ReadinessTimeout <= 0 {
 		return errors.New("LOGARIFT_READINESS_TIMEOUT_MS must be greater than zero")
 	}
@@ -130,6 +136,7 @@ func (c Config) PublicStatus() map[string]any {
 		"mongodb_uri_configured": c.MongoDBURI != "",
 		"math_engine_url":        c.MathEngineURL,
 		"export_dir":             c.ExportDir,
+		"upload_dir":             c.UploadDir,
 	}
 }
 

@@ -7,6 +7,8 @@ coverage.out
 .env
 exports/*
 !exports/.gitkeep
+data/uploads/*
+!data/uploads/.gitkeep
 
 # Editor/OS
 .DS_Store

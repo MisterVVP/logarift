@@ -201,3 +201,33 @@ Possible later additions:
 - advanced math service
 - report generator
 - backup/restore service
+
+## Quick Logging Enrichment Flow
+
+The backend includes an in-process deterministic enrichment engine for quick logging.
+
+```text
+User enters date, friction level, and notes
+Frontend sends POST /api/v1/friction-events/quick
+Go API validates the observed fields
+Go deterministic enrichment engine infers canonical event fields
+Go API stores observed/inferred/canonical event data in MongoDB
+Dashboard and math-engine scoring use canonical fields
+```
+
+The enrichment engine is intentionally separate from the C++ math engine:
+
+```text
+enrichment engine = interpretation of notes into structured fields
+math engine       = deterministic scoring from canonical structured fields
+```
+
+Future local LLM or local ML adapters may be added behind the enrichment boundary without changing the math-engine contract.
+
+## Upload flow
+
+For rich notes, the frontend may upload screenshots to the backend through `POST /api/v1/uploads`. The backend writes accepted images to `LOGARIFT_UPLOAD_DIR` and returns a local `/uploads/{filename}` URL. The notes editor inserts that URL into the event notes. No cloud object storage is used in MVP.
+
+## Math Engine Observability
+
+The C++ math engine emits structured JSON logs in service mode. Logs include score request lifecycle events and score calculation summaries with event count, period, CLA, FCI, SDC, wait minutes, active minutes, and duration.

@@ -13,7 +13,7 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o /out/logarift-ap
 FROM debian:bookworm-slim
 
 RUN useradd --system --uid 10001 --create-home --home-dir /var/lib/logarift logarift \
-    && mkdir -p /var/lib/logarift/exports \
+    && mkdir -p /var/lib/logarift/exports /var/lib/logarift/uploads \
     && chown -R logarift:logarift /var/lib/logarift
 
 COPY --from=build /out/logarift-api /usr/local/bin/logarift-api

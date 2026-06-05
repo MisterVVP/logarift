@@ -60,6 +60,8 @@ func (s *Server) routes() {
 	s.router.HandleFunc("GET /health/live", s.handleLiveness)
 	s.router.HandleFunc("GET /health/ready", s.handleReadiness)
 	s.router.HandleFunc("GET /api/v1/status", s.handleStatus)
+	s.router.HandleFunc("POST /api/v1/uploads", s.uploadAttachment)
+	s.router.HandleFunc("GET /uploads/{filename}", s.serveUploadedAttachment)
 	s.registerAPIRoutes()
 }
 
@@ -138,13 +140,17 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 			"ready":         ready,
 		},
 		"capabilities": map[string]bool{
-			"local_first":      true,
-			"single_user":      true,
-			"authentication":   false,
-			"cloud_sync":       false,
-			"hidden_telemetry": false,
-			"event_crud":       s.api.friction != nil && s.api.goals != nil && s.api.sessions != nil,
-			"scoring":          s.api.scoring != nil,
+			"local_first":         true,
+			"single_user":         true,
+			"authentication":      false,
+			"cloud_sync":          false,
+			"hidden_telemetry":    false,
+			"event_crud":          s.api.friction != nil && s.api.goals != nil && s.api.sessions != nil,
+			"quick_logging":       s.api.friction != nil,
+			"local_uploads":       true,
+			"rich_notes":          true,
+			"deterministic_rules": s.api.friction != nil,
+			"scoring":             s.api.scoring != nil,
 		},
 	})
 }
