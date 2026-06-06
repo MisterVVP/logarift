@@ -23,7 +23,7 @@ const (
 	defaultShutdownTimeoutMS       = 5000
 	defaultMongoDBConnectTimeoutMS = 5000
 	defaultLLMAdapterURL           = "http://localhost:8091"
-	defaultLLMAdapterTimeoutMS     = 1500
+	defaultLLMAdapterTimeoutMS     = 15000
 	defaultLLMAdapterMinConfidence = 0.70
 	defaultLLMAdapterPrivacyMode   = "text_only"
 )

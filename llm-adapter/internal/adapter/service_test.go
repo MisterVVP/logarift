@@ -10,9 +10,17 @@ import (
 	"time"
 )
 
-type fakeRuntime struct{ content string }
+type fakeRuntime struct {
+	content string
+	err     error
+}
 
-func (f fakeRuntime) Chat(context.Context, string, string) (string, error) { return f.content, nil }
+func (f fakeRuntime) Chat(context.Context, string, string) (string, error) {
+	if f.err != nil {
+		return "", f.err
+	}
+	return f.content, nil
+}
 func (f fakeRuntime) ModelInfo(context.Context) (ModelInfo, error) {
 	return ModelInfo{AdapterVersion: AdapterVersion, ModelRuntime: ModelRuntime, ModelName: "qwen3.6", ModelDigest: "sha256:abc", Available: true}, nil
 }
@@ -40,6 +48,25 @@ func TestEnrichNormalizesModelOutput(t *testing.T) {
 	}
 	if len(resp.Warnings) == 0 {
 		t.Fatalf("expected rejection warning")
+	}
+}
+
+func TestEnrichReturnsRuntimeDiagnostics(t *testing.T) {
+	cfg := Config{BindHost: "127.0.0.1", Port: "8091", RuntimeURL: "http://host.docker.internal:11434", Model: "logarift-enricher-qwen3-8b", RequestTimeout: time.Second, MaxInputChars: 12000, MaxPromptTokens: 8192, TruncationStrategy: "head_tail"}
+	svc := NewService(cfg, fakeRuntime{err: RuntimeError{Code: "ollama_chat_http_error", Message: "dial tcp: connect: connection refused", Endpoint: "http://host.docker.internal:11434/api/chat", Hint: "verify host Ollama is reachable from the container"}}, nil)
+	body := `{"request_id":"req-1","schema_version":"llm-adapter-request-v1","occurred_at":"2026-06-04T19:26:00Z","observed":{"friction_level":"orange","plain_text":"CI failed after 20 min.","links":[],"attachment_metadata":[]},"deterministic_baseline":{"workflow_stage":"test"},"allowed_values":{"workflow_stage":["test"],"friction_layer":["technical"],"friction_type":["failed_feedback"]}}`
+	req := httptest.NewRequest(http.MethodPost, "/v1/enrich/friction-event", strings.NewReader(body))
+	w := httptest.NewRecorder()
+	svc.Router().ServeHTTP(w, req)
+	if w.Code != http.StatusBadGateway {
+		t.Fatalf("status %d: %s", w.Code, w.Body.String())
+	}
+	var resp map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp["error_code"] != "ollama_chat_http_error" || resp["hint"] == "" || resp["detail"] == "" {
+		t.Fatalf("missing runtime diagnostics: %#v", resp)
 	}
 }
 

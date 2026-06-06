@@ -22,7 +22,7 @@ const (
 	defaultBindHost           = "127.0.0.1"
 	defaultRuntimeURL         = "http://localhost:11434"
 	defaultModel              = "qwen3.6"
-	defaultRequestTimeoutMS   = 1200
+	defaultRequestTimeoutMS   = 15000
 	defaultMaxInputChars      = 12000
 	defaultMaxPromptTokens    = 8192
 	defaultTruncationStrategy = "head_tail"

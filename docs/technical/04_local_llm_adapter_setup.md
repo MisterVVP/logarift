@@ -113,6 +113,46 @@ docker compose up --build
 
 For Docker Compose, the backend reaches the adapter at `http://llm-adapter:8091`, while the adapter reaches host Ollama through `host.docker.internal:11434` by default. Do not set `LOGARIFT_LLM_RUNTIME_URL=http://localhost:11434` for Docker Compose, because `localhost` inside the adapter container is the container itself, not the host machine. Use `http://localhost:11434` only when running the adapter directly on the host outside Docker. Prompts and responses are not logged unless `LOGARIFT_LLM_LOG_PROMPTS=true` or `LOGARIFT_LLM_LOG_RESPONSES=true` is explicitly configured.
 
+## Troubleshooting adapter runtime errors
+
+If adapter logs show `ollama_chat_http_error`, `ollama_tags_http_error`, or `runtime_error`, first check the adapter readiness endpoint:
+
+```bash
+curl http://localhost:8091/health/ready
+curl http://localhost:8091/v1/models/current
+```
+
+Useful log fields are `error_code`, `error_message`, `runtime_endpoint`, `http_status`, and `hint`. The logs intentionally do not include raw note text.
+
+For Docker Compose on Linux, host Ollama must be reachable from containers through `host.docker.internal:11434`. If the hint says the runtime cannot be reached, configure Ollama to listen on a non-loopback interface and restart it:
+
+```bash
+sudo systemctl edit ollama
+```
+
+Add:
+
+```ini
+[Service]
+Environment="OLLAMA_HOST=0.0.0.0:11434"
+```
+
+Then restart and verify:
+
+```bash
+sudo systemctl daemon-reload
+sudo systemctl restart ollama
+curl http://localhost:11434/api/tags
+```
+
+If the model exists but requests time out, increase both deadlines so the backend waits long enough for the adapter and the adapter waits long enough for Ollama:
+
+```bash
+export LOGARIFT_LLM_ADAPTER_TIMEOUT_MS=30000
+export LOGARIFT_LLM_REQUEST_TIMEOUT_MS=30000
+docker compose up --build
+```
+
 ## Runtime caches and files
 
 Ollama stores model files and runtime caches according to its platform defaults. Logarift does not copy model weights into the repository and does not send prompts to hosted LLM APIs in local adapter mode.
