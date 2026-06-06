@@ -62,6 +62,7 @@ type AllowedValues struct {
 type Response struct {
 	SchemaVersion  string           `json:"schema_version"`
 	RequestID      string           `json:"request_id"`
+	TraceID        string           `json:"trace_id,omitempty"`
 	AdapterVersion string           `json:"adapter_version"`
 	ModelRuntime   string           `json:"model_runtime"`
 	ModelName      string           `json:"model_name"`
@@ -118,6 +119,19 @@ func (c *Client) Enrich(ctx context.Context, req Request) (Response, error) {
 		return Response{}, err
 	}
 	httpReq.Header.Set("Content-Type", "application/json")
+	metadata := metadataFromContext(ctx)
+	if metadata.TraceID != "" {
+		httpReq.Header.Set("traceparent", "00-"+metadata.TraceID+"-0000000000000001-01")
+	}
+	if metadata.RequestID != "" {
+		httpReq.Header.Set("x-logarift-request-id", metadata.RequestID)
+	}
+	if metadata.EventID != "" {
+		httpReq.Header.Set("x-logarift-event-id", metadata.EventID)
+	}
+	if metadata.JobID != "" {
+		httpReq.Header.Set("x-logarift-job-id", metadata.JobID)
+	}
 	resp, err := c.http.Do(httpReq)
 	if err != nil {
 		c.recordFailure()

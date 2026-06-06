@@ -205,8 +205,11 @@ Useful implementation docs:
 
 ```text
 docs/product/08_quick_logging_and_enrichment.md
-docs/technical/02_mvp_3_to_7_implementation.md
-docs/technical/03_deterministic_enrichment_engine.md
+docs/technical/02_deterministic_enrichment_engine.md
+docs/technical/03_local_llm_adapter.md
+docs/technical/04_local_llm_adapter_setup.md
+docs/technical/05_local_ml_classifier_service.md
+docs/technical/system-design.md
 docs/runbooks/local_check.md
 math-engine/README.md
 frontend/README.md

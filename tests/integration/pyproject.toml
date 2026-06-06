@@ -1,0 +1,12 @@
+[project]
+name = "logarift-integration-tests"
+version = "0.1.0"
+description = "Docker Compose end-to-end tests for Logarift."
+requires-python = ">=3.12"
+dependencies = [
+  "pytest>=9.0.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["."]
+python_files = ["test_*.py"]

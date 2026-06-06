@@ -21,6 +21,7 @@ func (c fixedClock) Now() time.Time { return c.now }
 
 type fakeRepo struct {
 	event  *domain.FrictionEvent
+	job    *domain.LLMEnrichmentJob
 	getErr error
 }
 
@@ -43,6 +44,17 @@ func dispatcherForRepo(t *testing.T, repo *fakeRepo) *cqrs.Dispatcher {
 		repo.event = &cp
 		return cqrs.Empty{}, nil
 	}))
+	must(cqrs.RegisterCommand(d, func(ctx context.Context, command commands.CreateLLMEnrichmentJob) (commands.IDResult, error) {
+		command.Job.ID = bson.NewObjectID()
+		cp := *command.Job
+		repo.job = &cp
+		return commands.IDResult{ID: command.Job.ID}, nil
+	}))
+	must(cqrs.RegisterCommand(d, func(ctx context.Context, command commands.UpdateLLMEnrichmentJob) (cqrs.Empty, error) {
+		cp := *command.Job
+		repo.job = &cp
+		return cqrs.Empty{}, nil
+	}))
 	must(cqrs.RegisterCommand(d, func(ctx context.Context, command commands.DeleteFrictionEvent) (cqrs.Empty, error) {
 		if repo.getErr != nil {
 			return cqrs.Empty{}, repo.getErr
@@ -58,6 +70,17 @@ func dispatcherForRepo(t *testing.T, repo *fakeRepo) *cqrs.Dispatcher {
 			return nil, store.ErrNotFound
 		}
 		cp := *repo.event
+		cp.ID = query.ID
+		return &cp, nil
+	}))
+	must(cqrs.RegisterQuery(d, func(ctx context.Context, query queries.GetLLMEnrichmentJobByID) (*domain.LLMEnrichmentJob, error) {
+		if repo.getErr != nil {
+			return nil, repo.getErr
+		}
+		if repo.job == nil {
+			return nil, store.ErrNotFound
+		}
+		cp := *repo.job
 		cp.ID = query.ID
 		return &cp, nil
 	}))

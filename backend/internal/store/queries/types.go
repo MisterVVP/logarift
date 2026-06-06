@@ -17,6 +17,11 @@ type ListFrictionEvents struct {
 	Filter  store.FrictionEventFilter
 }
 
+type GetLLMEnrichmentJobByID struct {
+	Context context.Context
+	ID      bson.ObjectID
+}
+
 type GetWorkGoalByID struct {
 	Context context.Context
 	ID      bson.ObjectID

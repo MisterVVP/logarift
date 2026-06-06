@@ -44,6 +44,7 @@ services:
       LOGARIFT_LLM_TRUNCATION_STRATEGY: head_tail
       LOGARIFT_LLM_LOG_PROMPTS: "false"
       LOGARIFT_LLM_LOG_RESPONSES: "false"
+      LOGARIFT_LLM_MOCK_RESPONSE_ENABLED: ${LOGARIFT_LLM_MOCK_RESPONSE_ENABLED:-false}
     ports:
       - "127.0.0.1:8091:8091"
     extra_hosts:

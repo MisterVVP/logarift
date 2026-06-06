@@ -40,6 +40,7 @@ type Config struct {
 	TruncationStrategy string
 	LogPrompts         bool
 	LogResponses       bool
+	MockResponse       bool
 }
 
 func LoadConfig() (Config, error) {
@@ -55,6 +56,7 @@ func LoadConfig() (Config, error) {
 		TruncationStrategy: defaultTruncationStrategy,
 		LogPrompts:         getenvBool("LOGARIFT_LLM_LOG_PROMPTS", false),
 		LogResponses:       getenvBool("LOGARIFT_LLM_LOG_RESPONSES", false),
+		MockResponse:       getenvBool("LOGARIFT_LLM_MOCK_RESPONSE_ENABLED", false),
 	}
 	var err error
 	if cfg.RequestTimeout, err = getenvDurationMS("LOGARIFT_LLM_REQUEST_TIMEOUT_MS", defaultRequestTimeoutMS); err != nil {

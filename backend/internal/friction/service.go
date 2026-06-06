@@ -3,6 +3,7 @@ package friction
 import (
 	"context"
 	"errors"
+	"log/slog"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -36,6 +37,7 @@ type Service struct {
 	llmAdapter         LLMAdapter
 	llmMinConfidence   float64
 	llmIncludeMarkdown bool
+	llmAdapterURL      string
 }
 
 func NewService(dispatcher *cqrs.Dispatcher, clock Clock) *Service {
@@ -92,7 +94,14 @@ type Page struct {
 	NextCursor string
 }
 
-func (s *Service) CreateQuick(ctx context.Context, req QuickRequest) (Event, error) {
+type QuickResult struct {
+	Event
+	Enrichment domain.FrictionEnrichment
+}
+
+func (s *Service) SetLLMAdapterURL(url string) { s.llmAdapterURL = strings.TrimSpace(url) }
+
+func (s *Service) CreateQuick(ctx context.Context, req QuickRequest) (QuickResult, error) {
 	fields := []serviceerror.FieldError{}
 	if req.OccurredAt.IsZero() {
 		fields = append(fields, fe("occurred_at", "is required"))
@@ -111,15 +120,53 @@ func (s *Service) CreateQuick(ctx context.Context, req QuickRequest) (Event, err
 		fields = append(fields, fe("links", "must contain at most 20 links"))
 	}
 	if err := serviceerror.NewValidation(fields); err != nil {
-		return Event{}, err
+		return QuickResult{}, err
 	}
 	now := s.clock.Now().UTC()
 	event := s.enricher.Enrich(enrichment.Input{OccurredAt: req.OccurredAt.UTC(), FrictionLevel: level, NotesMarkdown: req.NotesMarkdown, Links: req.Links, Attachments: req.Attachments}, now)
-	maybeApplyLLM(ctx, s.llmAdapter, &event, llmMergeOptions{minConfidence: s.llmMinConfidence, includeMarkdown: s.llmIncludeMarkdown})
-	if _, err := s.dispatcher.SendCommand(commands.CreateFrictionEvent{Context: ctx, Event: &event}); err != nil {
-		return Event{}, mapErr(err)
+	event.Enrichment = &domain.FrictionEnrichment{
+		LLMStatus:           domain.LLMStatusDisabled,
+		DeterministicStatus: "applied",
+		UserMessage:         "Saved with deterministic enrichment. Local LLM enrichment is disabled.",
+		UpdatedAt:           now,
 	}
-	return event, nil
+	if s.llmAdapter != nil {
+		event.Enrichment.LLMStatus = domain.LLMStatusQueued
+		event.Enrichment.TraceID = newTraceID()
+		event.Enrichment.UserMessage = "Saved. Local LLM enrichment is running."
+	}
+	if _, err := s.dispatcher.SendCommand(commands.CreateFrictionEvent{Context: ctx, Event: &event}); err != nil {
+		return QuickResult{}, mapErr(err)
+	}
+	slog.Info("quick event accepted", "event_id", event.ID.Hex(), "llm_status", event.Enrichment.LLMStatus, "trace_id", event.Enrichment.TraceID, "deterministic_status", event.Enrichment.DeterministicStatus)
+	if s.llmAdapter != nil {
+		job := domain.LLMEnrichmentJob{
+			EventID:       event.ID,
+			RequestID:     newRequestID(),
+			TraceID:       event.Enrichment.TraceID,
+			Status:        domain.LLMStatusQueued,
+			MaxAttempts:   1,
+			CreatedAt:     now,
+			UpdatedAt:     now,
+			AdapterURL:    s.llmAdapterURL,
+			PromptVersion: "friction-enrichment-prompt-0.1",
+		}
+		if _, err := s.dispatcher.SendCommand(commands.CreateLLMEnrichmentJob{Context: ctx, Job: &job}); err != nil {
+			event.Enrichment.LLMStatus = domain.LLMStatusNotQueued
+			event.Enrichment.UserMessage = "Saved, but local LLM enrichment could not be queued."
+			event.Enrichment.UpdatedAt = s.clock.Now().UTC()
+			_, _ = s.dispatcher.SendCommand(commands.UpdateFrictionEvent{Context: ctx, Event: &event})
+			return QuickResult{Event: event, Enrichment: *event.Enrichment}, nil
+		}
+		event.Enrichment.JobID = job.ID.Hex()
+		event.Enrichment.UpdatedAt = s.clock.Now().UTC()
+		if _, err := s.dispatcher.SendCommand(commands.UpdateFrictionEvent{Context: ctx, Event: &event}); err != nil {
+			return QuickResult{}, mapErr(err)
+		}
+		slog.Info("llm enrichment queued", "trace_id", job.TraceID, "event_id", event.ID.Hex(), "job_id", job.ID.Hex(), "request_id", job.RequestID, "status", job.Status)
+		go s.processLLMEnrichmentJob(context.Background(), job.ID)
+	}
+	return QuickResult{Event: event, Enrichment: *event.Enrichment}, nil
 }
 
 func (s *Service) Create(ctx context.Context, req Request) (Event, error) {

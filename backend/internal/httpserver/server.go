@@ -39,6 +39,7 @@ func NewWithDispatcher(cfg config.Config, checker HealthChecker, build version.B
 	frictionService := friction.NewService(dispatcher, nil)
 	if cfg.LLMAdapterEnabled {
 		frictionService = friction.NewServiceWithLLM(dispatcher, nil, llmadapter.NewClient(cfg.LLMAdapterURL, cfg.LLMAdapterTimeout), cfg.LLMAdapterMinConfidence, cfg.LLMAdapterPromptPrivacyMode == "markdown")
+		frictionService.SetLLMAdapterURL(cfg.LLMAdapterURL)
 	}
 	return newServer(cfg, checker, build, apiServices{friction: frictionService, goals: goals.NewService(dispatcher, nil), sessions: sessions.NewService(dispatcher, nil), scoring: scoring.NewService(dispatcher, cfg.MathEngineURL, nil)})
 }
@@ -145,17 +146,18 @@ func (s *Server) handleStatus(w http.ResponseWriter, r *http.Request) {
 			"ready":         ready,
 		},
 		"capabilities": map[string]bool{
-			"local_first":         true,
-			"single_user":         true,
-			"authentication":      false,
-			"cloud_sync":          false,
-			"hidden_telemetry":    false,
-			"event_crud":          s.api.friction != nil && s.api.goals != nil && s.api.sessions != nil,
-			"quick_logging":       s.api.friction != nil,
-			"local_uploads":       true,
-			"rich_notes":          true,
-			"deterministic_rules": s.api.friction != nil,
-			"scoring":             s.api.scoring != nil,
+			"local_first":          true,
+			"single_user":          true,
+			"authentication":       false,
+			"cloud_sync":           false,
+			"hidden_telemetry":     false,
+			"event_crud":           s.api.friction != nil && s.api.goals != nil && s.api.sessions != nil,
+			"quick_logging":        s.api.friction != nil,
+			"local_uploads":        true,
+			"rich_notes":           true,
+			"deterministic_rules":  s.api.friction != nil,
+			"scoring":              s.api.scoring != nil,
+			"async_llm_enrichment": s.api.friction != nil && s.cfg.LLMAdapterEnabled,
 		},
 	})
 }

@@ -24,6 +24,8 @@ func (s *Store) RegisterCQRS(dispatcher *cqrs.Dispatcher) error {
 		s.createFrictionEvent,
 		s.updateFrictionEvent,
 		s.deleteFrictionEvent,
+		s.createLLMEnrichmentJob,
+		s.updateLLMEnrichmentJob,
 		s.createWorkGoal,
 		s.updateWorkGoal,
 		s.deleteWorkGoal,
@@ -40,6 +42,7 @@ func (s *Store) RegisterCQRS(dispatcher *cqrs.Dispatcher) error {
 		s.deleteExport,
 		s.getFrictionEventByID,
 		s.listFrictionEvents,
+		s.getLLMEnrichmentJobByID,
 		s.getWorkGoalByID,
 		s.listWorkGoals,
 		s.getWorkSessionByID,
@@ -68,6 +71,7 @@ func (s *Store) validateCQRSDependencies() error {
 		{name: "score snapshot repository", value: s.scoreSnapshots},
 		{name: "model config repository", value: s.modelConfigs},
 		{name: "export repository", value: s.exports},
+		{name: "llm enrichment job repository", value: s.llmJobs},
 	}
 	for _, dependency := range dependencies {
 		if dependency.value == nil {
@@ -90,6 +94,17 @@ func (s *Store) updateFrictionEvent(ctx context.Context, command commands.Update
 
 func (s *Store) deleteFrictionEvent(ctx context.Context, command commands.DeleteFrictionEvent) (cqrs.Empty, error) {
 	return cqrs.Empty{}, s.frictionEvents.delete(ctx, command.ID)
+}
+
+func (s *Store) createLLMEnrichmentJob(ctx context.Context, command commands.CreateLLMEnrichmentJob) (commands.IDResult, error) {
+	if err := s.llmJobs.create(ctx, command.Job); err != nil {
+		return commands.IDResult{}, err
+	}
+	return commands.IDResult{ID: command.Job.ID}, nil
+}
+
+func (s *Store) updateLLMEnrichmentJob(ctx context.Context, command commands.UpdateLLMEnrichmentJob) (cqrs.Empty, error) {
+	return cqrs.Empty{}, s.llmJobs.update(ctx, command.Job)
 }
 
 func (s *Store) createWorkGoal(ctx context.Context, command commands.CreateWorkGoal) (commands.IDResult, error) {
@@ -177,6 +192,10 @@ func (s *Store) getFrictionEventByID(ctx context.Context, query queries.GetFrict
 
 func (s *Store) listFrictionEvents(ctx context.Context, query queries.ListFrictionEvents) ([]domain.FrictionEvent, error) {
 	return s.frictionEvents.list(ctx, query.Filter)
+}
+
+func (s *Store) getLLMEnrichmentJobByID(ctx context.Context, query queries.GetLLMEnrichmentJobByID) (*domain.LLMEnrichmentJob, error) {
+	return s.llmJobs.getByID(ctx, query.ID)
 }
 
 func (s *Store) getWorkGoalByID(ctx context.Context, query queries.GetWorkGoalByID) (*domain.WorkGoal, error) {

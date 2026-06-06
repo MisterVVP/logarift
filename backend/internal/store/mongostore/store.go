@@ -24,6 +24,7 @@ type Store struct {
 	scoreSnapshots *scoreSnapshotRepo
 	modelConfigs   *modelConfigRepo
 	exports        *exportRepo
+	llmJobs        *llmEnrichmentJobRepo
 	db             *mongo.Database
 }
 
@@ -37,6 +38,7 @@ func New(client *database.Client) *Store {
 		scoreSnapshots: &scoreSnapshotRepo{db.Collection(domain.CollectionScoreSnapshots)},
 		modelConfigs:   &modelConfigRepo{db.Collection(domain.CollectionModelConfigs)},
 		exports:        &exportRepo{db.Collection(domain.CollectionExports)},
+		llmJobs:        &llmEnrichmentJobRepo{db.Collection(domain.CollectionLLMEnrichmentJobs)},
 	}
 }
 

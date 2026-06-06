@@ -27,6 +27,14 @@ func TestCreateQuickMergesAcceptedLLMFieldsAndPersistsRejected(t *testing.T) {
 	if err != nil {
 		t.Fatalf("CreateQuick() error: %v", err)
 	}
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		if repo.event != nil && repo.event.Inference != nil && repo.event.Inference.LocalLLM != nil {
+			got.Event = *repo.event
+			break
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
 	if got.WorkflowStage != "debugging" {
 		t.Fatalf("expected llm workflow stage, got %q", got.WorkflowStage)
 	}

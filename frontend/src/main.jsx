@@ -224,6 +224,7 @@ function EventComposer({ onCreated }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [lastEvent, setLastEvent] = useState(null);
+  const [lastEnrichment, setLastEnrichment] = useState(null);
 
   async function submit(e) {
     e.preventDefault();
@@ -242,6 +243,10 @@ function EventComposer({ onCreated }) {
       };
       const result = await api('/api/v1/friction-events/quick', { method: 'POST', body: JSON.stringify(payload) });
       setLastEvent(result.event);
+      setLastEnrichment(result.enrichment || result.event?.enrichment || null);
+      if (result.enrichment?.job_id) {
+        pollEnrichment(result.event.id, result.enrichment.job_id);
+      }
       setNotes('');
       setOccurredAt(nowLocalInput());
       onCreated();
@@ -249,6 +254,27 @@ function EventComposer({ onCreated }) {
       setError(err.message);
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function pollEnrichment(eventId, jobId) {
+    const terminal = new Set(['succeeded', 'partially_succeeded', 'failed', 'timed_out', 'cancelled', 'disabled', 'not_queued']);
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 750));
+      try {
+        const [eventRes, jobRes] = await Promise.all([
+          api(`/api/v1/friction-events/${eventId}`),
+          api(`/api/v1/enrichment-jobs/${jobId}`),
+        ]);
+        setLastEvent(eventRes.event);
+        setLastEnrichment(eventRes.event?.enrichment || { llm_status: jobRes.job?.status, job_id: jobId });
+        onCreated();
+        const status = eventRes.event?.enrichment?.llm_status || jobRes.job?.status;
+        if (terminal.has(status)) return;
+      } catch (err) {
+        setLastEnrichment((current) => current ? { ...current, user_message: err.message } : current);
+        return;
+      }
     }
   }
 
@@ -295,21 +321,29 @@ function EventComposer({ onCreated }) {
         {error && <p className="error full">{error}</p>}
         <button className="primary composer-submit" disabled={busy} title="Save the friction log and run local deterministic enrichment.">{busy ? 'Saving…' : 'Save friction'}</button>
       </form>
-      {lastEvent && <InferencePreview event={lastEvent} />}
+      {lastEvent && <InferencePreview event={lastEvent} enrichment={lastEnrichment || lastEvent.enrichment} />}
     </section>
   );
 }
 
-function InferencePreview({ event }) {
+function InferencePreview({ event, enrichment }) {
   return (
     <div className="inference-preview" title="These fields were inferred locally from the color and notes. They can be corrected later in advanced editing.">
       <div>
         <strong>Inferred locally</strong>
         <p>{event.workflow_stage} · {event.friction_layer} · {event.friction_type} · ~{event.time_lost_minutes} min lost</p>
       </div>
-      <ConfidenceBadge event={event} />
+      <div className="preview-badges">
+        <ConfidenceBadge event={event} />
+        <EnrichmentStatus enrichment={enrichment || event.enrichment} />
+      </div>
     </div>
   );
+}
+
+function EnrichmentStatus({ enrichment }) {
+  const status = enrichment?.llm_status || 'not_requested';
+  return <span className={`pill enrichment-${status}`} title={enrichment?.user_message || `LLM enrichment status: ${status}`}>LLM: {status.replaceAll('_', ' ')}</span>;
 }
 
 function ConfidenceBadge({ event }) {
@@ -481,6 +515,7 @@ function Timeline({ events }) {
               <div className="event-title-row">
                 <strong>{event.friction_type}</strong>
                 <ConfidenceBadge event={event} />
+                <EnrichmentStatus enrichment={event.enrichment} />
               </div>
               <p title="Inferred canonical metadata used by charts and scoring.">{event.workflow_stage} · {event.friction_layer} · severity {event.severity_self} · load {event.cognitive_load_self}</p>
               {event.notes && <div className="event-notes" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(event.notes) }} />}
