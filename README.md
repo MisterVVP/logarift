@@ -26,7 +26,7 @@ This package includes MVP-3 through MVP-7 on top of the existing MVP-0/MVP-1/MVP
 - Docker Compose local stack
 - optional local LLM adapter service for quick-event enrichment behind deterministic fallback
 
-The LLM adapter is disabled unless `LOGARIFT_LLM_ADAPTER_ENABLED=true`; see `docs/technical/04_local_llm_adapter_setup.md` for Ollama/Qwen setup.
+The LLM adapter is disabled unless `LOGARIFT_LLM_ADAPTER_ENABLED=true`; see `docs/technical/04_local_llm_adapter_setup.md` for Ollama/Qwen setup and optional Logarift-specific Modelfiles.
 
 Out of scope remains:
 

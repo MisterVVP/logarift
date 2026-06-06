@@ -57,6 +57,29 @@ ollama run qwen3.6
 
 If `qwen3.6` is too large, use `qwen3:8b`. To pin a larger Qwen3.6 size, use `qwen3.6:27b` or `qwen3.6:35b`.
 
+
+## Optional Logarift Ollama Modelfiles
+
+The repository includes project-specific Ollama Modelfiles under `llm-adapter/modelfiles/`. They are tailored to the adapter response contract (`fields` plus `warnings`) instead of the generic suggestion fields. This keeps the local model aligned with Logarift's ontology, confidence gates, and MVP non-goals.
+
+Create the lower-resource alias:
+
+```bash
+ollama pull qwen3:8b
+ollama create logarift-enricher-qwen3-8b -f llm-adapter/modelfiles/logarift-enricher-qwen3-8b.Modelfile
+export LOGARIFT_LLM_MODEL=logarift-enricher-qwen3-8b
+```
+
+Create the stronger Qwen3.6 alias:
+
+```bash
+ollama pull qwen3.6
+ollama create logarift-enricher-qwen36 -f llm-adapter/modelfiles/logarift-enricher-qwen36.Modelfile
+export LOGARIFT_LLM_MODEL=logarift-enricher-qwen36
+```
+
+These Modelfiles intentionally do not emit `suggested_next_action`, recommendations, coaching, or productivity judgments. The adapter is only allowed to propose structured enrichment candidates; the backend still validates every field and falls back to deterministic rules when needed.
+
 ## Project setup with adapter enabled
 
 Smoke-test the local runtime before starting Logarift:
@@ -66,7 +89,7 @@ curl http://localhost:11434/api/chat \
   -d '{"model":"qwen3.6","messages":[{"role":"user","content":"Return only JSON: {\"ok\":true}"}],"stream":false,"format":"json"}'
 ```
 
-If using the fallback model, replace `qwen3.6` with `qwen3:8b`.
+If using the fallback model, replace `qwen3.6` with `qwen3:8b`. If using a Logarift Modelfile alias, replace it with `logarift-enricher-qwen3-8b` or `logarift-enricher-qwen36`.
 
 Enable the adapter for Docker Compose:
 
