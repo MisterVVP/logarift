@@ -95,9 +95,9 @@ Enable the adapter for Docker Compose:
 
 ```bash
 export LOGARIFT_LLM_ADAPTER_ENABLED=true
-export LOGARIFT_LLM_ADAPTER_URL=http://localhost:8091
-export LOGARIFT_LLM_RUNTIME_URL=http://localhost:11434
 export LOGARIFT_LLM_MODEL=qwen3.6
+# Optional on Linux if host-gateway is unavailable; the compose default is usually correct:
+# export LOGARIFT_LLM_RUNTIME_URL=http://host.docker.internal:11434
 docker compose up --build
 ```
 
@@ -105,13 +105,13 @@ Windows PowerShell equivalent:
 
 ```powershell
 $env:LOGARIFT_LLM_ADAPTER_ENABLED = "true"
-$env:LOGARIFT_LLM_ADAPTER_URL = "http://localhost:8091"
-$env:LOGARIFT_LLM_RUNTIME_URL = "http://localhost:11434"
 $env:LOGARIFT_LLM_MODEL = "qwen3.6"
+# Optional; the compose default is usually correct:
+# $env:LOGARIFT_LLM_RUNTIME_URL = "http://host.docker.internal:11434"
 docker compose up --build
 ```
 
-For Docker Compose, the backend reaches the adapter at `http://llm-adapter:8091`, while the adapter reaches host Ollama through `host.docker.internal:11434` by default. Prompts and responses are not logged unless `LOGARIFT_LLM_LOG_PROMPTS=true` or `LOGARIFT_LLM_LOG_RESPONSES=true` is explicitly configured.
+For Docker Compose, the backend reaches the adapter at `http://llm-adapter:8091`, while the adapter reaches host Ollama through `host.docker.internal:11434` by default. Do not set `LOGARIFT_LLM_RUNTIME_URL=http://localhost:11434` for Docker Compose, because `localhost` inside the adapter container is the container itself, not the host machine. Use `http://localhost:11434` only when running the adapter directly on the host outside Docker. Prompts and responses are not logged unless `LOGARIFT_LLM_LOG_PROMPTS=true` or `LOGARIFT_LLM_LOG_RESPONSES=true` is explicitly configured.
 
 ## Runtime caches and files
 
