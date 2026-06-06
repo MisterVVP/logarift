@@ -24,6 +24,9 @@ This package includes MVP-3 through MVP-7 on top of the existing MVP-0/MVP-1/MVP
 - dashboard cards and breakdowns with tooltips
 - structured math-engine calculation logs
 - Docker Compose local stack
+- optional local LLM adapter service for quick-event enrichment behind deterministic fallback
+
+The LLM adapter is disabled unless `LOGARIFT_LLM_ADAPTER_ENABLED=true`; see `docs/technical/04_local_llm_adapter_setup.md` for Ollama/Qwen setup.
 
 Out of scope remains:
 
@@ -41,6 +44,7 @@ Out of scope remains:
 backend/       Go backend API
 frontend/      React + Vite frontend
 math-engine/   C++ scoring service and CLI-compatible scorer
+llm-adapter/   Optional Go service that calls local Ollama-compatible models
 docs/          Product, technical, and runbook docs
 exports/       Local export target placeholder
 data/uploads/  Local uploaded screenshots when running outside Docker
@@ -111,7 +115,7 @@ Open:
 http://localhost:5173
 ```
 
-Run the full Docker stack with MongoDB, math engine, backend, and frontend:
+Run the full Docker stack with MongoDB, math engine, optional LLM adapter, backend, and frontend:
 
 ```bash
 docker compose up --build
@@ -122,6 +126,7 @@ Open:
 ```text
 Backend:  http://localhost:8080/api/v1/status
 Frontend: http://localhost:5173
+LLM adapter: http://localhost:8091/health/live
 ```
 
 ## API Overview

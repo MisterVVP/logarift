@@ -30,16 +30,26 @@ type RealClock struct{}
 func (RealClock) Now() time.Time { return time.Now().UTC() }
 
 type Service struct {
-	dispatcher *cqrs.Dispatcher
-	clock      Clock
-	enricher   enrichment.Engine
+	dispatcher         *cqrs.Dispatcher
+	clock              Clock
+	enricher           enrichment.Engine
+	llmAdapter         LLMAdapter
+	llmMinConfidence   float64
+	llmIncludeMarkdown bool
 }
 
 func NewService(dispatcher *cqrs.Dispatcher, clock Clock) *Service {
+	return NewServiceWithLLM(dispatcher, clock, nil, 0.70, false)
+}
+
+func NewServiceWithLLM(dispatcher *cqrs.Dispatcher, clock Clock, adapter LLMAdapter, minConfidence float64, includeMarkdown bool) *Service {
 	if clock == nil {
 		clock = RealClock{}
 	}
-	return &Service{dispatcher: dispatcher, clock: clock, enricher: enrichment.NewEngine()}
+	if minConfidence <= 0 {
+		minConfidence = 0.70
+	}
+	return &Service{dispatcher: dispatcher, clock: clock, enricher: enrichment.NewEngine(), llmAdapter: adapter, llmMinConfidence: minConfidence, llmIncludeMarkdown: includeMarkdown}
 }
 
 type Event = domain.FrictionEvent
@@ -105,6 +115,7 @@ func (s *Service) CreateQuick(ctx context.Context, req QuickRequest) (Event, err
 	}
 	now := s.clock.Now().UTC()
 	event := s.enricher.Enrich(enrichment.Input{OccurredAt: req.OccurredAt.UTC(), FrictionLevel: level, NotesMarkdown: req.NotesMarkdown, Links: req.Links, Attachments: req.Attachments}, now)
+	maybeApplyLLM(ctx, s.llmAdapter, &event, llmMergeOptions{minConfidence: s.llmMinConfidence, includeMarkdown: s.llmIncludeMarkdown})
 	if _, err := s.dispatcher.SendCommand(commands.CreateFrictionEvent{Context: ctx, Event: &event}); err != nil {
 		return Event{}, mapErr(err)
 	}

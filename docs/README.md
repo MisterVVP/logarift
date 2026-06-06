@@ -160,7 +160,19 @@ Defines the backend CQRS boundary used by the Go API. Services send command/quer
 
 Documents the local rules engine used by `POST /api/v1/friction-events/quick` and explains how it remains separate from the C++ math engine.
 
-#### 3. Local Check Runbook
+#### 3. Local LLM Adapter
+
+[technical/03_local_llm_adapter.md](./technical/03_local_llm_adapter.md)
+
+Defines the optional local-only LLM adapter service boundary, Ollama-compatible runtime contract, backend merge policy, privacy constraints, and setup requirements.
+
+#### 4. Local LLM Adapter Setup
+
+[technical/04_local_llm_adapter_setup.md](./technical/04_local_llm_adapter_setup.md)
+
+Documents Ubuntu and Windows 11 setup for Ollama and Qwen, adapter environment variables, smoke requests, and official upstream references.
+
+#### 5. Local Check Runbook
 
 [runbooks/local_check.md](./runbooks/local_check.md)
 
