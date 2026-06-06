@@ -25,6 +25,30 @@ services:
     ports:
       - "127.0.0.1:8090:8090"
 
+
+  llm-adapter:
+    build:
+      context: .
+      dockerfile: llm-adapter/Dockerfile
+    container_name: logarift-llm-adapter
+    restart: unless-stopped
+    environment:
+      LOGARIFT_LLM_ADAPTER_HOST: 0.0.0.0
+      LOGARIFT_LLM_ADAPTER_PORT: 8091
+      LOGARIFT_LLM_RUNTIME_URL: ${LOGARIFT_LLM_RUNTIME_URL:-http://host.docker.internal:11434}
+      LOGARIFT_LLM_ADAPTER_ALLOW_REMOTE_RUNTIME: ${LOGARIFT_LLM_ADAPTER_ALLOW_REMOTE_RUNTIME:-false}
+      LOGARIFT_LLM_MODEL: ${LOGARIFT_LLM_MODEL:-qwen3.6}
+      LOGARIFT_LLM_REQUEST_TIMEOUT_MS: ${LOGARIFT_LLM_REQUEST_TIMEOUT_MS:-15000}
+      LOGARIFT_LLM_MAX_INPUT_CHARS: ${LOGARIFT_LLM_MAX_INPUT_CHARS:-12000}
+      LOGARIFT_LLM_MAX_PROMPT_TOKENS: ${LOGARIFT_LLM_MAX_PROMPT_TOKENS:-8192}
+      LOGARIFT_LLM_TRUNCATION_STRATEGY: head_tail
+      LOGARIFT_LLM_LOG_PROMPTS: "false"
+      LOGARIFT_LLM_LOG_RESPONSES: "false"
+    ports:
+      - "127.0.0.1:8091:8091"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
   backend:
     build:
       context: .
@@ -41,6 +65,11 @@ services:
       LOGARIFT_UPLOAD_DIR: /var/lib/logarift/uploads
       LOGARIFT_READINESS_TIMEOUT_MS: 10000
       LOGARIFT_SHUTDOWN_TIMEOUT_MS: 5000
+      LOGARIFT_LLM_ADAPTER_ENABLED: ${LOGARIFT_LLM_ADAPTER_ENABLED:-false}
+      LOGARIFT_LLM_ADAPTER_URL: http://llm-adapter:8091
+      LOGARIFT_LLM_ADAPTER_TIMEOUT_MS: ${LOGARIFT_LLM_ADAPTER_TIMEOUT_MS:-15000}
+      LOGARIFT_LLM_ADAPTER_MIN_CONFIDENCE: ${LOGARIFT_LLM_ADAPTER_MIN_CONFIDENCE:-0.70}
+      LOGARIFT_LLM_ADAPTER_PROMPT_PRIVACY_MODE: ${LOGARIFT_LLM_ADAPTER_PROMPT_PRIVACY_MODE:-text_only}
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
@@ -49,6 +78,8 @@ services:
       mongodb:
         condition: service_healthy
       math-engine:
+        condition: service_started
+      llm-adapter:
         condition: service_started
 
   frontend:

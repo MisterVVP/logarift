@@ -60,6 +60,32 @@ type FrictionInference struct {
 	EngineType    string                            `bson:"engine_type" json:"engine_type"`
 	CreatedAt     time.Time                         `bson:"created_at" json:"created_at"`
 	Fields        map[string]FrictionFieldInference `bson:"fields" json:"fields"`
+	LocalLLM      *FrictionAdapterInference         `bson:"local_llm,omitempty" json:"local_llm,omitempty"`
+}
+
+type FrictionAdapterInference struct {
+	RequestID      string                               `bson:"request_id,omitempty" json:"request_id,omitempty"`
+	AdapterVersion string                               `bson:"adapter_version,omitempty" json:"adapter_version,omitempty"`
+	ModelRuntime   string                               `bson:"model_runtime,omitempty" json:"model_runtime,omitempty"`
+	ModelName      string                               `bson:"model_name,omitempty" json:"model_name,omitempty"`
+	ModelDigest    string                               `bson:"model_digest,omitempty" json:"model_digest,omitempty"`
+	PromptVersion  string                               `bson:"prompt_version,omitempty" json:"prompt_version,omitempty"`
+	DurationMS     int64                                `bson:"duration_ms,omitempty" json:"duration_ms,omitempty"`
+	Warnings       []string                             `bson:"warnings,omitempty" json:"warnings,omitempty"`
+	ErrorCode      string                               `bson:"error_code,omitempty" json:"error_code,omitempty"`
+	AcceptedFields map[string]FrictionFieldInference    `bson:"accepted_fields,omitempty" json:"accepted_fields,omitempty"`
+	RejectedFields map[string]FrictionRejectedInference `bson:"rejected_fields,omitempty" json:"rejected_fields,omitempty"`
+}
+
+type FrictionRejectedInference struct {
+	SuggestedValue  any     `bson:"suggested_value,omitempty" json:"suggested_value,omitempty"`
+	Confidence      float64 `bson:"confidence,omitempty" json:"confidence,omitempty"`
+	Source          string  `bson:"source,omitempty" json:"source,omitempty"`
+	Explanation     string  `bson:"explanation,omitempty" json:"explanation,omitempty"`
+	RejectionReason string  `bson:"rejection_reason" json:"rejection_reason"`
+	AdapterVersion  string  `bson:"adapter_version,omitempty" json:"adapter_version,omitempty"`
+	ModelName       string  `bson:"model_name,omitempty" json:"model_name,omitempty"`
+	PromptVersion   string  `bson:"prompt_version,omitempty" json:"prompt_version,omitempty"`
 }
 
 type FrictionFieldInference struct {

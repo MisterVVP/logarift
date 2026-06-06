@@ -9,6 +9,7 @@ import (
 	"github.com/MisterVVP/logarift/backend/internal/config"
 	"github.com/MisterVVP/logarift/backend/internal/friction"
 	"github.com/MisterVVP/logarift/backend/internal/goals"
+	"github.com/MisterVVP/logarift/backend/internal/llmadapter"
 	"github.com/MisterVVP/logarift/backend/internal/scoring"
 	"github.com/MisterVVP/logarift/backend/internal/sessions"
 	"github.com/MisterVVP/logarift/backend/internal/store/cqrs"
@@ -35,7 +36,11 @@ func New(cfg config.Config, checker HealthChecker, build version.BuildInfo) *Ser
 }
 
 func NewWithDispatcher(cfg config.Config, checker HealthChecker, build version.BuildInfo, dispatcher *cqrs.Dispatcher) *Server {
-	return newServer(cfg, checker, build, apiServices{friction: friction.NewService(dispatcher, nil), goals: goals.NewService(dispatcher, nil), sessions: sessions.NewService(dispatcher, nil), scoring: scoring.NewService(dispatcher, cfg.MathEngineURL, nil)})
+	frictionService := friction.NewService(dispatcher, nil)
+	if cfg.LLMAdapterEnabled {
+		frictionService = friction.NewServiceWithLLM(dispatcher, nil, llmadapter.NewClient(cfg.LLMAdapterURL, cfg.LLMAdapterTimeout), cfg.LLMAdapterMinConfidence, cfg.LLMAdapterPromptPrivacyMode == "markdown")
+	}
+	return newServer(cfg, checker, build, apiServices{friction: frictionService, goals: goals.NewService(dispatcher, nil), sessions: sessions.NewService(dispatcher, nil), scoring: scoring.NewService(dispatcher, cfg.MathEngineURL, nil)})
 }
 
 func newServer(cfg config.Config, checker HealthChecker, build version.BuildInfo, api apiServices) *Server {
