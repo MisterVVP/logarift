@@ -8,15 +8,17 @@ import (
 
 const systemPrompt = `You enrich developer friction event notes into strict JSON fields.
 Rules:
-- Return JSON only. No markdown, advice, productivity judgement, coaching, or performance rating.
+- Return one JSON object only, with top-level keys "fields" and "warnings". No markdown, advice, productivity judgement, coaching, or performance rating.
 - Choose values only from allowed ontology values.
-- If you cannot choose safely, omit the field instead of inventing a value.
+- For simple developer-friction notes, return at least workflow_stage, friction_layer, friction_type, time_lost_minutes when present, and tags.
+- Use deterministic_baseline as a safe default when the note does not contradict it; confirm baseline fields instead of returning an empty fields object.
+- Omit a field only when both the note and deterministic_baseline are unsafe or contradictory for that field.
 - Keep explanations short, local, non-prescriptive, and based only on the provided event text and metadata.
 - Use confidence between 0.0 and 1.0.`
 
 func buildPrompt(req EnrichRequest, input string, trunc TruncationMetadata) (string, error) {
 	payload := map[string]any{
-		"task":                   "Return candidate friction enrichment fields as JSON matching the requested schema.",
+		"task":                   "Return candidate friction enrichment fields as JSON matching the requested schema. Prefer useful candidates over an empty fields object for simple notes.",
 		"allowed_values":         req.AllowedValues,
 		"deterministic_baseline": req.DeterministicBaseline,
 		"observed": map[string]any{
@@ -38,6 +40,19 @@ func buildPrompt(req EnrichRequest, input string, trunc TruncationMetadata) (str
 				"tags":                "optional object: {value: array of short lowercase strings, confidence: number, source: local_llm, explanation: short string}",
 			},
 			"warnings": "array of short strings",
+		},
+		"example_for_similar_simple_note": map[string]any{
+			"input_plain_text": "CI failed again after 20 min with an unclear timeout.",
+			"expected_response": map[string]any{
+				"fields": map[string]any{
+					"workflow_stage":    map[string]any{"value": "test", "confidence": 0.9, "source": "local_llm", "explanation": "The note describes CI validation failure."},
+					"friction_layer":    map[string]any{"value": "technical", "confidence": 0.86, "source": "local_llm", "explanation": "The blocker is CI/runtime behavior."},
+					"friction_type":     map[string]any{"value": "failed_feedback", "confidence": 0.82, "source": "local_llm", "explanation": "The feedback loop failed with a timeout."},
+					"time_lost_minutes": map[string]any{"value": 20, "confidence": 0.95, "source": "observed_text", "explanation": "The note explicitly says 20 min."},
+					"tags":              map[string]any{"value": []string{"ci", "timeout"}, "confidence": 0.8, "source": "local_llm", "explanation": "The note mentions CI and timeout."},
+				},
+				"warnings": []string{},
+			},
 		},
 	}
 	encoded, err := json.Marshal(payload)

@@ -38,6 +38,7 @@ type Service struct {
 	llmMinConfidence   float64
 	llmIncludeMarkdown bool
 	llmAdapterURL      string
+	llmJobQueue        LLMJobQueue
 }
 
 func NewService(dispatcher *cqrs.Dispatcher, clock Clock) *Service {
@@ -100,6 +101,15 @@ type QuickResult struct {
 }
 
 func (s *Service) SetLLMAdapterURL(url string) { s.llmAdapterURL = strings.TrimSpace(url) }
+
+func (s *Service) SetLLMJobQueue(queue LLMJobQueue) { s.llmJobQueue = queue }
+
+func (s *Service) StartLLMJobConsumer(ctx context.Context) {
+	if s.llmJobQueue == nil {
+		return
+	}
+	s.llmJobQueue.Start(ctx, s.processLLMEnrichmentJob)
+}
 
 func (s *Service) CreateQuick(ctx context.Context, req QuickRequest) (QuickResult, error) {
 	fields := []serviceerror.FieldError{}
@@ -164,7 +174,23 @@ func (s *Service) CreateQuick(ctx context.Context, req QuickRequest) (QuickResul
 			return QuickResult{}, mapErr(err)
 		}
 		slog.Info("llm enrichment queued", "trace_id", job.TraceID, "event_id", event.ID.Hex(), "job_id", job.ID.Hex(), "request_id", job.RequestID, "status", job.Status)
-		go s.processLLMEnrichmentJob(context.Background(), job.ID)
+		if s.llmJobQueue != nil {
+			if err := s.llmJobQueue.Enqueue(ctx, job.ID); err != nil {
+				event.Enrichment.LLMStatus = domain.LLMStatusNotQueued
+				event.Enrichment.UserMessage = "Saved, but local LLM enrichment could not be published to Valkey."
+				event.Enrichment.UpdatedAt = s.clock.Now().UTC()
+				job.Status = domain.LLMStatusNotQueued
+				job.ErrorCode = "queue_publish_failed"
+				job.LastError = err.Error()
+				job.UpdatedAt = event.Enrichment.UpdatedAt
+				_, _ = s.dispatcher.SendCommand(commands.UpdateFrictionEvent{Context: ctx, Event: &event})
+				_, _ = s.dispatcher.SendCommand(commands.UpdateLLMEnrichmentJob{Context: ctx, Job: &job})
+				slog.Warn("llm enrichment queue publish failed", "trace_id", job.TraceID, "event_id", event.ID.Hex(), "job_id", job.ID.Hex(), "error", err)
+				return QuickResult{Event: event, Enrichment: *event.Enrichment}, nil
+			}
+		} else {
+			go s.processLLMEnrichmentJob(context.Background(), job.ID)
+		}
 	}
 	return QuickResult{Event: event, Enrichment: *event.Enrichment}, nil
 }

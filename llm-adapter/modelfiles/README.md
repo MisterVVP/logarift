@@ -12,17 +12,29 @@ ollama create logarift-enricher-qwen3-8b -f llm-adapter/modelfiles/logarift-enri
 export LOGARIFT_LLM_MODEL=logarift-enricher-qwen3-8b
 ```
 
+## Optional stronger 14B model
+
+Use this after checking adapter warnings and response-shape diagnostics if the 8B alias remains too conservative on simple notes.
+
+```bash
+ollama pull qwen3:14b
+ollama create logarift-enricher-qwen3-14b -f llm-adapter/modelfiles/logarift-enricher-qwen3-14b.Modelfile
+export LOGARIFT_LLM_MODEL=logarift-enricher-qwen3-14b
+```
+
 ## Stronger Qwen3.6 model
 
 ```bash
 ollama pull qwen3.6
 ollama create logarift-enricher-qwen36 -f llm-adapter/modelfiles/logarift-enricher-qwen36.Modelfile
+export LOGARIFT_LLM_MODEL=logarift-enricher-qwen3-14b
+# or:
 export LOGARIFT_LLM_MODEL=logarift-enricher-qwen36
 ```
 
 ## Direct Ollama smoke test
 
-Use this to inspect the model alias before routing through Logarift. Replace the model name with `logarift-enricher-qwen36` if using the stronger alias.
+Use this to inspect the model alias before routing through Logarift. Replace the model name with `logarift-enricher-qwen3-14b` or `logarift-enricher-qwen36` if using a stronger alias.
 
 ```bash
 curl http://localhost:11434/api/chat \
@@ -46,6 +58,8 @@ After creating an alias, point the adapter to it:
 ```bash
 export LOGARIFT_LLM_ADAPTER_ENABLED=true
 export LOGARIFT_LLM_MODEL=logarift-enricher-qwen3-8b
+# or:
+export LOGARIFT_LLM_MODEL=logarift-enricher-qwen3-14b
 # or:
 export LOGARIFT_LLM_MODEL=logarift-enricher-qwen36
 ```

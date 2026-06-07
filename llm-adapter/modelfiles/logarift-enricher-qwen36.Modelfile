@@ -15,7 +15,9 @@ Task:
 - Use event text, link metadata, attachment metadata, allowed ontology values, and deterministic_baseline only.
 - Keep the original meaning; never infer unstated people, teams, secrets, or files.
 - Use only values from allowed_values for workflow_stage, friction_layer, and friction_type.
-- If no allowed ontology value is safe, omit that field.
+- For simple CI/test/build/review/docs/debugging notes, return useful candidate fields instead of an empty fields object.
+- If deterministic_baseline is supplied and the note does not contradict it, confirm baseline fields with appropriate confidence instead of omitting them.
+- If no allowed ontology value is safe from both the note and deterministic_baseline, omit that field.
 - Do not generate advice, productivity recommendations, coaching, or developer performance judgments.
 - Do not include suggested_next_action or any other unsupported field.
 - Return JSON only.

@@ -13,6 +13,7 @@ flowchart LR
   UI[React + Vite UI]
   API[Go backend API]
   DB[(MongoDB)]
+  Valkey[(Valkey Streams)]
   Worker[Backend LLM enrichment worker]
   Adapter[Local LLM adapter]
   Runtime[Ollama-compatible runtime]
@@ -21,7 +22,9 @@ flowchart LR
   UI -->|HTTP JSON| API
   API -->|CRUD, quick logs, jobs| DB
   API -->|score requests| Math
-  API -->|enqueue job| DB
+  API -->|persist job record| DB
+  API -->|XADD job_id| Valkey
+  Worker -->|XREADGROUP job_id| Valkey
   Worker -->|claim/read job| DB
   Worker -->|HTTP JSON + trace context| Adapter
   Adapter -->|/api/chat| Runtime
@@ -39,6 +42,7 @@ sequenceDiagram
   participant UI as React UI
   participant API as Go backend API
   participant DB as MongoDB
+  participant Valkey as Valkey Streams
   participant Worker as Backend worker
   participant Adapter as LLM adapter
   participant Runtime as Local model runtime
@@ -48,9 +52,11 @@ sequenceDiagram
   API->>API: Apply deterministic enrichment
   API->>DB: Insert friction_event
   API->>DB: Insert llm_enrichment_job
+  API->>Valkey: XADD logarift:llm_enrichment_jobs job_id
   API->>DB: Update event.enrichment queued metadata
   API-->>UI: 201 event + enrichment{llm_status=queued, job_id, trace_id}
 
+  Worker->>Valkey: XREADGROUP logarift-backend
   Worker->>DB: Load queued job and event
   Worker->>DB: Mark job and event running
   Worker->>Adapter: POST /v1/enrich/friction-event with traceparent and Logarift IDs
@@ -104,6 +110,8 @@ not_queued
 ```
 
 ### Adapter request path
+
+The backend persists every job in MongoDB and uses Valkey Streams for asynchronous dispatch. Compose pins the open-source `valkey/valkey:9.1.0-alpine` image, creates the `logarift:llm_enrichment_jobs` stream with consumer group `logarift-backend`, publishes jobs with `XADD`, consumes them with `XREADGROUP GROUP`, and acknowledges processed messages with `XACK`. MongoDB remains the auditable job state source; Valkey is the delivery mechanism.
 
 The backend worker calls:
 
@@ -216,4 +224,4 @@ LOGARIFT_LLM_ADAPTER_ENABLED=true
 LOGARIFT_LLM_MOCK_RESPONSE_ENABLED=true
 ```
 
-Production-like local runs should leave `LOGARIFT_LLM_MOCK_RESPONSE_ENABLED=false` and point the adapter at an Ollama-compatible runtime.
+Production-like local runs should leave `LOGARIFT_LLM_MOCK_RESPONSE_ENABLED=false` and point the adapter at an Ollama-compatible runtime. If the adapter logs `field_count=0`, first inspect the `warnings` value and merge summary; this usually indicates prompt/response-shape conservatism or rejected schema output, not necessarily that the model is too small. The prompt and Modelfiles instruct local models to confirm safe deterministic baselines for simple notes before returning an empty `fields` object.

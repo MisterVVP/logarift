@@ -161,6 +161,12 @@ func normalizeResponse(req EnrichRequest, raw, model string, trunc TruncationMet
 	if err := json.Unmarshal([]byte(raw), &modelOut); err != nil {
 		return EnrichResponse{}, nil, err
 	}
+	if len(modelOut.Fields) == 0 {
+		if repaired := fieldsFromTopLevelObject(raw); len(repaired) > 0 {
+			modelOut.Fields = repaired
+			modelOut.Warnings = append(modelOut.Warnings, "repaired top-level field object into fields envelope")
+		}
+	}
 	allowed := allowedMaps(req.AllowedValues)
 	fields := map[string]Field{}
 	warnings := []string{}
@@ -174,6 +180,26 @@ func normalizeResponse(req EnrichRequest, raw, model string, trunc TruncationMet
 		}
 	}
 	return EnrichResponse{SchemaVersion: "llm-adapter-response-v1", RequestID: req.RequestID, AdapterVersion: AdapterVersion, ModelRuntime: ModelRuntime, ModelName: model, PromptVersion: PromptVersion, DurationMS: duration.Milliseconds(), Fields: fields, Warnings: append(modelOut.Warnings, warnings...), TruncationMetadata: &trunc}, nil, nil
+}
+
+func fieldsFromTopLevelObject(raw string) map[string]Field {
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &top); err != nil {
+		return nil
+	}
+	known := map[string]struct{}{"workflow_stage": {}, "friction_layer": {}, "friction_type": {}, "time_lost_minutes": {}, "resume_time_minutes": {}, "interruption_count": {}, "tags": {}}
+	fields := map[string]Field{}
+	for name, value := range top {
+		if _, ok := known[name]; !ok {
+			continue
+		}
+		var field Field
+		if err := json.Unmarshal(value, &field); err != nil {
+			continue
+		}
+		fields[name] = field
+	}
+	return fields
 }
 
 func allowedMaps(values AllowedValues) map[string]map[string]struct{} {
@@ -338,6 +364,7 @@ func (s *Service) logOutput(requestID, traceID, jobID, status string, started ti
 		"field_count", len(resp.Fields),
 		"accepted_field_count", len(resp.Fields),
 		"warning_count", len(resp.Warnings),
+		"warnings", resp.Warnings,
 		"error_code", errorCode,
 		"fields", fields,
 	)

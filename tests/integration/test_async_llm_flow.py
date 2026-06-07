@@ -83,7 +83,8 @@ def test_async_ui_backend_llm_adapter_flow_through_compose() -> None:
     )
     try:
         compose("up", "--build", "-d", env=env)
-        wait_for_json(f"{BACKEND}/api/v1/status", lambda data: data.get("database", {}).get("ready") is True)
+        status = wait_for_json(f"{BACKEND}/api/v1/status", lambda data: data.get("database", {}).get("ready") is True)
+        assert status.get("capabilities", {}).get("valkey_streams") is True
         wait_for_text(FRONTEND, "Logarift")
 
         created = post_json(

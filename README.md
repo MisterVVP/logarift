@@ -115,7 +115,7 @@ Open:
 http://localhost:5173
 ```
 
-Run the full Docker stack with MongoDB, math engine, optional LLM adapter, backend, and frontend:
+Run the full Docker stack with MongoDB, Valkey Streams, math engine, optional LLM adapter, backend, and frontend:
 
 ```bash
 docker compose up --build
@@ -228,4 +228,4 @@ cd backend
 go mod download
 ```
 
-Docker Compose starts a local MongoDB service for the backend.
+Docker Compose starts local MongoDB and Valkey services for the backend. MongoDB is the auditable data/job state store; Valkey Streams deliver asynchronous LLM enrichment jobs between the API request path and the backend worker.
