@@ -178,7 +178,8 @@ model_runtime
 model_name
 prompt_version
 llm_status
-accepted_field_count
+normalized_field_count (adapter logs)
+accepted_field_count (backend merge policy)
 rejected_field_count
 fallback_field_count
 warning_count
@@ -224,4 +225,4 @@ LOGARIFT_LLM_ADAPTER_ENABLED=true
 LOGARIFT_LLM_MOCK_RESPONSE_ENABLED=true
 ```
 
-Production-like local runs should leave `LOGARIFT_LLM_MOCK_RESPONSE_ENABLED=false` and point the adapter at an Ollama-compatible runtime. If the adapter logs `field_count=0`, first inspect the `warnings` value and merge summary; this usually indicates prompt/response-shape conservatism or rejected schema output, not necessarily that the model is too small. The prompt and Modelfiles instruct local models to confirm safe deterministic baselines for simple notes before returning an empty `fields` object.
+Production-like local runs should leave `LOGARIFT_LLM_MOCK_RESPONSE_ENABLED=false` and point the adapter at an Ollama-compatible runtime. If the adapter logs `normalized_field_count=0`, first inspect the `warnings` value and merge summary; this usually indicates prompt/response-shape conservatism or rejected schema output, not necessarily that the model is too small. The prompt and Modelfiles instruct local models to confirm safe deterministic baselines for simple notes before returning an empty `fields` object.

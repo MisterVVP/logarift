@@ -1,8 +1,10 @@
 package adapter
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -28,7 +30,9 @@ func (f fakeRuntime) ModelInfo(context.Context) (ModelInfo, error) {
 func TestEnrichNormalizesModelOutput(t *testing.T) {
 	cfg := Config{BindHost: "127.0.0.1", Port: "8091", RuntimeURL: "http://localhost:11434", Model: "qwen3.6", RequestTimeout: time.Second, MaxInputChars: 12000, MaxPromptTokens: 8192, TruncationStrategy: "head_tail"}
 	modelJSON := `{"fields":{"workflow_stage":{"value":"test","confidence":0.9,"source":"local_llm","explanation":"CI validation failed."},"friction_type":{"value":"invalid","confidence":0.9,"source":"local_llm"},"time_lost_minutes":{"value":20,"confidence":0.95,"source":"observed_text"},"tags":{"value":["CI","timeout","ci"],"confidence":0.8,"source":"local_llm"}},"warnings":[]}`
-	svc := NewService(cfg, fakeRuntime{content: modelJSON}, nil)
+	logBuffer := &bytes.Buffer{}
+	logger := slog.New(slog.NewJSONHandler(logBuffer, nil))
+	svc := NewService(cfg, fakeRuntime{content: modelJSON}, logger)
 	body := `{"request_id":"req-1","schema_version":"llm-adapter-request-v1","occurred_at":"2026-06-04T19:26:00Z","observed":{"friction_level":"orange","plain_text":"CI failed after 20 min.","links":[],"attachment_metadata":[]},"deterministic_baseline":{"workflow_stage":"test"},"allowed_values":{"workflow_stage":["test"],"friction_layer":["technical"],"friction_type":["failed_feedback"]}}`
 	req := httptest.NewRequest(http.MethodPost, "/v1/enrich/friction-event", strings.NewReader(body))
 	w := httptest.NewRecorder()
@@ -48,6 +52,13 @@ func TestEnrichNormalizesModelOutput(t *testing.T) {
 	}
 	if len(resp.Warnings) == 0 {
 		t.Fatalf("expected rejection warning")
+	}
+	logs := logBuffer.String()
+	if !strings.Contains(logs, `"normalized_field_count":3`) {
+		t.Fatalf("adapter log should report normalized fields: %s", logs)
+	}
+	if strings.Contains(logs, "accepted_field_count") {
+		t.Fatalf("adapter log should not use backend merge-policy accepted field terminology: %s", logs)
 	}
 }
 

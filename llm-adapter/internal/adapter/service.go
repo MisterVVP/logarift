@@ -361,8 +361,7 @@ func (s *Service) logOutput(requestID, traceID, jobID, status string, started ti
 		"runtime_url", s.cfg.RuntimeURL,
 		"timeout_ms", s.cfg.RequestTimeout.Milliseconds(),
 		"duration_ms", s.now().Sub(started).Milliseconds(),
-		"field_count", len(resp.Fields),
-		"accepted_field_count", len(resp.Fields),
+		"normalized_field_count", len(resp.Fields),
 		"warning_count", len(resp.Warnings),
 		"warnings", resp.Warnings,
 		"error_code", errorCode,
@@ -370,8 +369,8 @@ func (s *Service) logOutput(requestID, traceID, jobID, status string, started ti
 	)
 }
 
-func (s *Service) log(requestID, status string, started time.Time, accepted, warnings int, errorCode string, extra ...any) {
-	attrs := []any{"request_id", requestID, "status", status, "adapter_version", AdapterVersion, "model_runtime", ModelRuntime, "model_name", s.cfg.Model, "runtime_url", s.cfg.RuntimeURL, "timeout_ms", s.cfg.RequestTimeout.Milliseconds(), "duration_ms", s.now().Sub(started).Milliseconds(), "accepted_field_count", accepted, "warning_count", warnings, "error_code", errorCode}
+func (s *Service) log(requestID, status string, started time.Time, normalizedFields, warnings int, errorCode string, extra ...any) {
+	attrs := []any{"request_id", requestID, "status", status, "adapter_version", AdapterVersion, "model_runtime", ModelRuntime, "model_name", s.cfg.Model, "runtime_url", s.cfg.RuntimeURL, "timeout_ms", s.cfg.RequestTimeout.Milliseconds(), "duration_ms", s.now().Sub(started).Milliseconds(), "normalized_field_count", normalizedFields, "warning_count", warnings, "error_code", errorCode}
 	attrs = append(attrs, extra...)
 	s.logger.Info("llm adapter request", attrs...)
 }
