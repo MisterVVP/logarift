@@ -11,8 +11,6 @@ Friction is a compounding signal that affects cognitive load, flow stability, an
 
 ## Implemented MVP Scope in This Package
 
-This package includes MVP-3 through MVP-7 on top of the existing MVP-0/MVP-1/MVP-2 foundation:
-
 - three-field quick friction logging with deterministic local enrichment
 - manual CRUD APIs for friction events, work goals, and work sessions
 - deterministic C++ math engine service with CLI-compatible mode
