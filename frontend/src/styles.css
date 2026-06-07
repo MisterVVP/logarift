@@ -131,6 +131,12 @@ time { color: #64748b; white-space: nowrap; font-size: 13px; }
   color: #166534;
 }
 
+.pill.enrichment-disabled,
+.pill.enrichment-cancelled {
+  background: #e2e8f0;
+  color: #334155;
+}
+
 .pill.enrichment-failed,
 .pill.enrichment-timed_out,
 .pill.enrichment-not_queued {
