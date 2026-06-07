@@ -2,8 +2,10 @@ package httpserver
 
 import (
 	"net/http"
+	"sort"
 	"time"
 
+	"github.com/MisterVVP/logarift/backend/internal/domain"
 	"github.com/MisterVVP/logarift/backend/internal/friction"
 	"github.com/MisterVVP/logarift/backend/internal/goals"
 	"github.com/MisterVVP/logarift/backend/internal/scoring"
@@ -60,7 +62,51 @@ func (s *Server) createQuickFrictionEvent(w http.ResponseWriter, r *http.Request
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"event": event})
+	writeJSON(w, http.StatusCreated, map[string]any{"event": frictionEventPayload(event)})
+}
+
+type frictionEventResponse struct {
+	domain.FrictionEvent `json:",inline"`
+	LLMMergeSummary      *llmMergeSummary `json:"llm_merge_summary,omitempty"`
+}
+
+type llmMergeSummary struct {
+	AcceptedFieldsCount int      `json:"accepted_fields_count"`
+	RejectedFieldsCount int      `json:"rejected_fields_count"`
+	WarningCount        int      `json:"warning_count"`
+	ErrorCode           string   `json:"error_code,omitempty"`
+	RejectedFieldNames  []string `json:"rejected_field_names,omitempty"`
+}
+
+func frictionEventPayload(event domain.FrictionEvent) frictionEventResponse {
+	return frictionEventResponse{FrictionEvent: event, LLMMergeSummary: llmMergeSummaryFromEvent(event)}
+}
+
+func frictionEventPayloads(events []domain.FrictionEvent) []frictionEventResponse {
+	payloads := make([]frictionEventResponse, len(events))
+	for i, event := range events {
+		payloads[i] = frictionEventPayload(event)
+	}
+	return payloads
+}
+
+func llmMergeSummaryFromEvent(event domain.FrictionEvent) *llmMergeSummary {
+	if event.Inference == nil || event.Inference.LocalLLM == nil {
+		return nil
+	}
+	localLLM := event.Inference.LocalLLM
+	rejectedNames := make([]string, 0, len(localLLM.RejectedFields))
+	for name := range localLLM.RejectedFields {
+		rejectedNames = append(rejectedNames, name)
+	}
+	sort.Strings(rejectedNames)
+	return &llmMergeSummary{
+		AcceptedFieldsCount: len(localLLM.AcceptedFields),
+		RejectedFieldsCount: len(localLLM.RejectedFields),
+		WarningCount:        len(localLLM.Warnings),
+		ErrorCode:           localLLM.ErrorCode,
+		RejectedFieldNames:  rejectedNames,
+	}
 }
 
 func (s *Server) createFrictionEvent(w http.ResponseWriter, r *http.Request) {
@@ -74,7 +120,7 @@ func (s *Server) createFrictionEvent(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"event": event})
+	writeJSON(w, http.StatusCreated, map[string]any{"event": frictionEventPayload(event)})
 }
 func (s *Server) listFrictionEvents(w http.ResponseWriter, r *http.Request) {
 	limit, err := parseLimit(r.URL.Query().Get("limit"))
@@ -98,7 +144,7 @@ func (s *Server) listFrictionEvents(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"events": page.Events, "next_cursor": page.NextCursor})
+	writeJSON(w, http.StatusOK, map[string]any{"events": frictionEventPayloads(page.Events), "next_cursor": page.NextCursor})
 }
 func (s *Server) getFrictionEvent(w http.ResponseWriter, r *http.Request) {
 	event, err := s.api.friction.Get(r.Context(), r.PathValue("id"))
@@ -106,7 +152,7 @@ func (s *Server) getFrictionEvent(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"event": event})
+	writeJSON(w, http.StatusOK, map[string]any{"event": frictionEventPayload(event)})
 }
 func (s *Server) updateFrictionEvent(w http.ResponseWriter, r *http.Request) {
 	var req friction.Request
@@ -119,7 +165,7 @@ func (s *Server) updateFrictionEvent(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"event": event})
+	writeJSON(w, http.StatusOK, map[string]any{"event": frictionEventPayload(event)})
 }
 func (s *Server) deleteFrictionEvent(w http.ResponseWriter, r *http.Request) {
 	if err := s.api.friction.Delete(r.Context(), r.PathValue("id")); err != nil {

@@ -307,9 +307,65 @@ function InferencePreview({ event }) {
         <strong>Inferred locally</strong>
         <p>{event.workflow_stage} · {event.friction_layer} · {event.friction_type} · ~{event.time_lost_minutes} min lost</p>
       </div>
-      <ConfidenceBadge event={event} />
+      <div className="inference-badges">
+        <ConfidenceBadge event={event} />
+        <LLMStatusBadge event={event} />
+      </div>
     </div>
   );
+}
+
+function LLMStatusBadge({ event }) {
+  const status = llmStatus(event);
+  if (!status) return null;
+  return <span className={`pill llm-status ${status.tone}`} title={status.title}>{status.label}</span>;
+}
+
+const trueLLMErrorCodes = new Set(['adapter_unavailable', 'adapter_timeout', 'timeout', 'network_error', 'invalid_adapter_response', 'invalid_adapter_schema', 'invalid_response']);
+
+function llmStatus(event) {
+  const localLLM = event?.inference?.local_llm;
+  const summary = event?.llm_merge_summary;
+  if (!localLLM && !summary) return null;
+
+  const accepted = countFields(summary?.accepted_fields_count, localLLM?.accepted_fields);
+  const rejected = countFields(summary?.rejected_fields_count, localLLM?.rejected_fields);
+  const warnings = Number(summary?.warning_count ?? localLLM?.warnings?.length ?? 0) || 0;
+  const errorCode = summary?.error_code || localLLM?.error_code || '';
+  const hasTrueError = trueLLMErrorCodes.has(errorCode);
+  const counts = `${accepted} accepted · ${rejected} rejected`;
+
+  if (hasTrueError) {
+    return {
+      label: `LLM: deterministic fallback (${counts})`,
+      tone: 'error',
+      title: `Adapter did not produce a usable enrichment response (${errorCode || 'error'}). ${counts}.`,
+    };
+  }
+  if (accepted > 0 && (rejected > 0 || warnings > 0)) {
+    return {
+      label: `LLM: applied with fallback (${counts})`,
+      tone: 'fallback',
+      title: `LLM enrichment applied accepted fields while deterministic values were kept for rejected or warning fields. ${counts}.`,
+    };
+  }
+  if (accepted > 0) {
+    return { label: `LLM: applied (${counts})`, tone: 'success', title: `LLM enrichment applied. ${counts}.` };
+  }
+  if (rejected > 0 || warnings > 0) {
+    return {
+      label: `LLM: fallback kept rules (${counts})`,
+      tone: 'fallback',
+      title: `LLM completed, but deterministic values were kept for low-confidence or invalid fields. ${counts}.`,
+    };
+  }
+  return { label: `LLM: completed (${counts})`, tone: 'success', title: `LLM enrichment completed. ${counts}.` };
+}
+
+function countFields(summaryCount, fields) {
+  const numeric = Number(summaryCount);
+  if (Number.isFinite(numeric)) return numeric;
+  return fields ? Object.keys(fields).length : 0;
 }
 
 function ConfidenceBadge({ event }) {
@@ -480,7 +536,10 @@ function Timeline({ events }) {
             <div className="event-main">
               <div className="event-title-row">
                 <strong>{event.friction_type}</strong>
-                <ConfidenceBadge event={event} />
+                <div className="event-badges">
+                  <ConfidenceBadge event={event} />
+                  <LLMStatusBadge event={event} />
+                </div>
               </div>
               <p title="Inferred canonical metadata used by charts and scoring.">{event.workflow_stage} · {event.friction_layer} · severity {event.severity_self} · load {event.cognitive_load_self}</p>
               {event.notes && <div className="event-notes" dangerouslySetInnerHTML={{ __html: sanitizeRichHtml(event.notes) }} />}
