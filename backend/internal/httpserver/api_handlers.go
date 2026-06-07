@@ -116,7 +116,7 @@ func (s *Server) getLLMEnrichmentJob(w http.ResponseWriter, r *http.Request) {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusOK, map[string]any{"job": job})
+	writeJSON(w, http.StatusOK, map[string]any{"job": job, "merge_summary": job.MergeSummary})
 }
 
 func (s *Server) updateFrictionEvent(w http.ResponseWriter, r *http.Request) {

@@ -267,9 +267,10 @@ function EventComposer({ onCreated }) {
           api(`/api/v1/enrichment-jobs/${jobId}`),
         ]);
         setLastEvent(eventRes.event);
-        setLastEnrichment(eventRes.event?.enrichment || { llm_status: jobRes.job?.status, job_id: jobId });
+        const nextEnrichment = mergeEnrichmentWithJob(eventRes.event?.enrichment, jobRes, jobId);
+        setLastEnrichment(nextEnrichment);
         onCreated();
-        const status = eventRes.event?.enrichment?.llm_status || jobRes.job?.status;
+        const status = nextEnrichment.llm_status;
         if (terminal.has(status)) return;
       } catch (err) {
         setLastEnrichment((current) => current ? { ...current, user_message: err.message } : current);
@@ -341,9 +342,54 @@ function InferencePreview({ event, enrichment }) {
   );
 }
 
+function mergeEnrichmentWithJob(enrichment, jobResponse, jobId) {
+  const job = jobResponse?.job || {};
+  const mergeSummary = enrichment?.merge_summary || job.merge_summary || jobResponse?.merge_summary || null;
+  return {
+    ...(enrichment || {}),
+    llm_status: enrichment?.llm_status || job.status || 'not_requested',
+    job_id: enrichment?.job_id || job.id || jobId,
+    merge_summary: mergeSummary || undefined,
+  };
+}
+
+function countLabel(count, singular, plural = `${singular}s`) {
+  if (!Number.isFinite(count)) return null;
+  return `${count} ${count === 1 ? singular : plural}`;
+}
+
+function fieldCountParts(summary) {
+  if (!summary) return [];
+  return [
+    countLabel(summary.accepted_field_count, 'accepted field'),
+    countLabel(summary.rejected_field_count, 'rejected field'),
+    countLabel(summary.fallback_field_count, 'fallback field'),
+  ].filter(Boolean);
+}
+
+function enrichmentDisplay(enrichment) {
+  const status = enrichment?.llm_status || 'not_requested';
+  const summary = enrichment?.merge_summary;
+  const rejectedCount = summary?.rejected_field_count || 0;
+  const fallbackCount = summary?.fallback_field_count || 0;
+  const hasFallback = status === 'partially_succeeded' || rejectedCount > 0 || fallbackCount > 0;
+  const counts = fieldCountParts(summary);
+  const countSuffix = counts.length > 0 ? ` (${counts.join(', ')})` : '';
+
+  if ((status === 'succeeded' || status === 'partially_succeeded') && hasFallback) {
+    return { label: `applied with fallback${countSuffix}`, titleStatus: 'applied with fallback' };
+  }
+  if (status === 'succeeded') return { label: `applied${countSuffix}`, titleStatus: 'applied' };
+  if (status === 'partially_succeeded') return { label: `applied with fallback${countSuffix}`, titleStatus: 'applied with fallback' };
+
+  return { label: status.replaceAll('_', ' '), titleStatus: status.replaceAll('_', ' ') };
+}
+
 function EnrichmentStatus({ enrichment }) {
   const status = enrichment?.llm_status || 'not_requested';
-  return <span className={`pill enrichment-${status}`} title={enrichment?.user_message || `LLM enrichment status: ${status}`}>LLM: {status.replaceAll('_', ' ')}</span>;
+  const display = enrichmentDisplay(enrichment);
+  const title = enrichment?.user_message || `LLM enrichment status: ${display.titleStatus}`;
+  return <span className={`pill enrichment-${status}`} title={title}>LLM: {display.label}</span>;
 }
 
 function ConfidenceBadge({ event }) {
