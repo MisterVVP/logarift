@@ -384,7 +384,7 @@ adapter_version
 model_runtime
 model_name
 duration_ms
-accepted_field_count
+normalized_field_count
 warning_count
 error_code
 ```
