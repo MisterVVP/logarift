@@ -126,7 +126,7 @@ The adapter does not expose browser-facing endpoints and does not write to Mongo
 
 ## Merge and persistence model
 
-The backend merges adapter output field-by-field:
+The backend merges adapter output field-by-field. A syntactically valid adapter response with zero candidate fields is not treated as a transport or adapter failure; the backend records `partially_succeeded`, keeps deterministic canonical fields, and stores a merge decision with `reason=no_fields_returned` so the UI does not show a false hard failure:
 
 ```mermaid
 flowchart TD

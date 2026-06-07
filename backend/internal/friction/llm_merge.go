@@ -49,8 +49,12 @@ func mergeAdapterResponseWithJob(event *domain.FrictionEvent, resp llmadapter.Re
 		event.Inference.LocalLLM = &domain.FrictionAdapterInference{RequestID: resp.RequestID, AdapterVersion: resp.AdapterVersion, ModelRuntime: resp.ModelRuntime, ModelName: resp.ModelName, PromptVersion: resp.PromptVersion, ErrorCode: "invalid_adapter_schema", Warnings: []string{"adapter response schema was invalid; deterministic fallback used"}}
 		return domain.LLMEnrichmentMergeResult{LLMStatus: domain.LLMStatusFailed, FieldDecisions: map[string]domain.LLMFieldDecision{}, AdapterResult: adapterSummary(resp), RejectedFieldCount: 1, FallbackFieldCount: 1}
 	}
-	adapterMeta := &domain.FrictionAdapterInference{RequestID: resp.RequestID, AdapterVersion: resp.AdapterVersion, ModelRuntime: resp.ModelRuntime, ModelName: resp.ModelName, ModelDigest: resp.ModelDigest, PromptVersion: resp.PromptVersion, DurationMS: resp.DurationMS, Warnings: resp.Warnings, AcceptedFields: map[string]domain.FrictionFieldInference{}, RejectedFields: map[string]domain.FrictionRejectedInference{}}
+	adapterMeta := &domain.FrictionAdapterInference{RequestID: resp.RequestID, AdapterVersion: resp.AdapterVersion, ModelRuntime: resp.ModelRuntime, ModelName: resp.ModelName, ModelDigest: resp.ModelDigest, PromptVersion: resp.PromptVersion, DurationMS: resp.DurationMS, Warnings: append([]string{}, resp.Warnings...), AcceptedFields: map[string]domain.FrictionFieldInference{}, RejectedFields: map[string]domain.FrictionRejectedInference{}}
 	decisions := map[string]domain.LLMFieldDecision{}
+	if len(resp.Fields) == 0 {
+		adapterMeta.Warnings = append(adapterMeta.Warnings, "adapter returned no candidate fields; deterministic fallback used")
+		decisions["adapter_response"] = domain.LLMFieldDecision{Decision: "fallback_used", Reason: "no_fields_returned"}
+	}
 	for name, field := range resp.Fields {
 		value, rejection := validateAdapterField(name, field)
 		if rejection == "" {
@@ -75,16 +79,22 @@ func mergeAdapterResponseWithJob(event *domain.FrictionEvent, resp llmadapter.Re
 	}
 	refreshCanonical(event)
 	status := domain.LLMStatusSucceeded
-	if len(adapterMeta.AcceptedFields) == 0 && (len(adapterMeta.RejectedFields) > 0 || len(resp.Fields) == 0) {
-		status = domain.LLMStatusFailed
-	} else if len(adapterMeta.RejectedFields) > 0 || len(adapterMeta.Warnings) > 0 {
+	if len(adapterMeta.RejectedFields) > 0 || len(adapterMeta.Warnings) > 0 || len(resp.Fields) == 0 {
 		status = domain.LLMStatusPartiallySucceeded
 	}
-	return domain.LLMEnrichmentMergeResult{LLMStatus: status, AdapterResult: adapterSummary(resp), FieldDecisions: decisions, AcceptedFieldCount: len(adapterMeta.AcceptedFields), RejectedFieldCount: len(adapterMeta.RejectedFields), FallbackFieldCount: len(adapterMeta.RejectedFields)}
+	fallbackCount := len(adapterMeta.RejectedFields)
+	if len(resp.Fields) == 0 {
+		fallbackCount = 1
+	}
+	return domain.LLMEnrichmentMergeResult{LLMStatus: status, AdapterResult: adapterSummaryWithWarnings(resp, len(adapterMeta.Warnings)), FieldDecisions: decisions, AcceptedFieldCount: len(adapterMeta.AcceptedFields), RejectedFieldCount: len(adapterMeta.RejectedFields), FallbackFieldCount: fallbackCount}
 }
 
 func adapterSummary(resp llmadapter.Response) domain.LLMAdapterResultSummary {
-	return domain.LLMAdapterResultSummary{AdapterVersion: resp.AdapterVersion, ModelRuntime: resp.ModelRuntime, ModelName: resp.ModelName, PromptVersion: resp.PromptVersion, DurationMS: resp.DurationMS, WarningCount: len(resp.Warnings)}
+	return adapterSummaryWithWarnings(resp, len(resp.Warnings))
+}
+
+func adapterSummaryWithWarnings(resp llmadapter.Response, warningCount int) domain.LLMAdapterResultSummary {
+	return domain.LLMAdapterResultSummary{AdapterVersion: resp.AdapterVersion, ModelRuntime: resp.ModelRuntime, ModelName: resp.ModelName, PromptVersion: resp.PromptVersion, DurationMS: resp.DurationMS, WarningCount: warningCount}
 }
 
 func canonicalValue(event *domain.FrictionEvent, name string) any {
