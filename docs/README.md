@@ -156,7 +156,7 @@ Defines the backend CQRS boundary used by the Go API. Services send command/quer
 
 #### 2. Deterministic Enrichment Engine
 
-[technical/03_deterministic_enrichment_engine.md](./technical/03_deterministic_enrichment_engine.md)
+[technical/02_deterministic_enrichment_engine.md](./technical/02_deterministic_enrichment_engine.md)
 
 Documents the local rules engine used by `POST /api/v1/friction-events/quick` and explains how it remains separate from the C++ math engine.
 
@@ -172,7 +172,19 @@ Defines the optional local-only LLM adapter service boundary, Ollama-compatible 
 
 Documents Ubuntu and Windows 11 setup for Ollama and Qwen, adapter environment variables, smoke requests, and official upstream references.
 
-#### 5. Local Check Runbook
+#### 5. Local ML Classifier Service
+
+[technical/05_local_ml_classifier_service.md](./technical/05_local_ml_classifier_service.md)
+
+Defines the future optional local-only classifier service boundary, training data source, inference contract, correction workflow, and relationship to deterministic and LLM enrichment.
+
+#### 6. System Design
+
+[technical/system-design.md](./technical/system-design.md)
+
+Living system-design document for runtime component boundaries, asynchronous LLM enrichment, backend worker integration, UI polling, scoring, observability, and Docker Compose integration testing.
+
+#### 7. Local Check Runbook
 
 [runbooks/local_check.md](./runbooks/local_check.md)
 

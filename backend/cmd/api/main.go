@@ -65,14 +65,15 @@ func main() {
 	}()
 
 	api := httpserver.NewWithDispatcher(cfg, db, version.Current(), dispatcher)
+	serverCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+	api.StartBackground(serverCtx)
+
 	server := &http.Server{
 		Addr:              cfg.Address(),
 		Handler:           api.Handler(),
 		ReadHeaderTimeout: 5 * time.Second,
 	}
-
-	serverCtx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	go func() {
 		slog.Info("starting Logarift API", "address", cfg.Address(), "database", cfg.MongoDBDatabase)

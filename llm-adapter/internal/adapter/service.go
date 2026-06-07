@@ -48,6 +48,10 @@ func (s *Service) live(w http.ResponseWriter, _ *http.Request) {
 }
 
 func (s *Service) ready(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.MockResponse {
+		writeJSON(w, http.StatusOK, map[string]any{"status": "ok", "model": ModelInfo{AdapterVersion: AdapterVersion, ModelRuntime: ModelRuntime, ModelName: s.cfg.Model, RuntimeURL: s.cfg.RuntimeURL, Available: true}})
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), s.cfg.RequestTimeout)
 	defer cancel()
 	info, err := s.runtime.ModelInfo(ctx)
@@ -61,6 +65,10 @@ func (s *Service) ready(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Service) modelCurrent(w http.ResponseWriter, r *http.Request) {
+	if s.cfg.MockResponse {
+		writeJSON(w, http.StatusOK, ModelInfo{AdapterVersion: AdapterVersion, ModelRuntime: ModelRuntime, ModelName: s.cfg.Model, RuntimeURL: s.cfg.RuntimeURL, Available: true})
+		return
+	}
 	ctx, cancel := context.WithTimeout(r.Context(), s.cfg.RequestTimeout)
 	defer cancel()
 	info, err := s.runtime.ModelInfo(ctx)
@@ -93,12 +101,18 @@ func (s *Service) enrich(w http.ResponseWriter, r *http.Request) {
 	}
 	ctx, cancel := context.WithTimeout(r.Context(), s.cfg.RequestTimeout)
 	defer cancel()
-	content, err := s.runtime.Chat(ctx, systemPrompt, prompt)
-	if err != nil {
-		detail := runtimeErrorDetail(err)
-		s.log(req.RequestID, "failed", started, 0, 0, detail.Code, "error_message", detail.Message, "http_status", detail.HTTPStatus, "runtime_endpoint", detail.Endpoint, "hint", detail.Hint)
-		writeJSON(w, http.StatusBadGateway, map[string]any{"error_code": detail.Code, "message": "local model runtime call failed", "detail": detail.Message, "hint": detail.Hint})
-		return
+	content := ""
+	if s.cfg.MockResponse {
+		content = mockModelContent(req)
+	} else {
+		var err error
+		content, err = s.runtime.Chat(ctx, systemPrompt, prompt)
+		if err != nil {
+			detail := runtimeErrorDetail(err)
+			s.log(req.RequestID, "failed", started, 0, 0, detail.Code, "error_message", detail.Message, "http_status", detail.HTTPStatus, "runtime_endpoint", detail.Endpoint, "hint", detail.Hint)
+			writeJSON(w, http.StatusBadGateway, map[string]any{"error_code": detail.Code, "message": "local model runtime call failed", "detail": detail.Message, "hint": detail.Hint})
+			return
+		}
 	}
 	if s.cfg.LogResponses {
 		s.logger.Debug("llm response", "request_id", req.RequestID, "response", content)
@@ -110,10 +124,13 @@ func (s *Service) enrich(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	resp.Warnings = append(resp.Warnings, warnings...)
-	if info, err := s.runtime.ModelInfo(ctx); err == nil {
-		resp.ModelDigest = info.ModelDigest
+	resp.TraceID = traceIDFromHeader(r.Header.Get("traceparent"))
+	if !s.cfg.MockResponse {
+		if info, err := s.runtime.ModelInfo(ctx); err == nil {
+			resp.ModelDigest = info.ModelDigest
+		}
 	}
-	s.log(req.RequestID, "ok", started, len(resp.Fields), len(resp.Warnings), "")
+	s.logOutput(req.RequestID, resp.TraceID, r.Header.Get("x-logarift-job-id"), "ok", started, resp, "")
 	writeJSON(w, http.StatusOK, resp)
 }
 
@@ -144,6 +161,12 @@ func normalizeResponse(req EnrichRequest, raw, model string, trunc TruncationMet
 	if err := json.Unmarshal([]byte(raw), &modelOut); err != nil {
 		return EnrichResponse{}, nil, err
 	}
+	if len(modelOut.Fields) == 0 {
+		if repaired := fieldsFromTopLevelObject(raw); len(repaired) > 0 {
+			modelOut.Fields = repaired
+			modelOut.Warnings = append(modelOut.Warnings, "repaired top-level field object into fields envelope")
+		}
+	}
 	allowed := allowedMaps(req.AllowedValues)
 	fields := map[string]Field{}
 	warnings := []string{}
@@ -157,6 +180,26 @@ func normalizeResponse(req EnrichRequest, raw, model string, trunc TruncationMet
 		}
 	}
 	return EnrichResponse{SchemaVersion: "llm-adapter-response-v1", RequestID: req.RequestID, AdapterVersion: AdapterVersion, ModelRuntime: ModelRuntime, ModelName: model, PromptVersion: PromptVersion, DurationMS: duration.Milliseconds(), Fields: fields, Warnings: append(modelOut.Warnings, warnings...), TruncationMetadata: &trunc}, nil, nil
+}
+
+func fieldsFromTopLevelObject(raw string) map[string]Field {
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(raw), &top); err != nil {
+		return nil
+	}
+	known := map[string]struct{}{"workflow_stage": {}, "friction_layer": {}, "friction_type": {}, "time_lost_minutes": {}, "resume_time_minutes": {}, "interruption_count": {}, "tags": {}}
+	fields := map[string]Field{}
+	for name, value := range top {
+		if _, ok := known[name]; !ok {
+			continue
+		}
+		var field Field
+		if err := json.Unmarshal(value, &field); err != nil {
+			continue
+		}
+		fields[name] = field
+	}
+	return fields
 }
 
 func allowedMaps(values AllowedValues) map[string]map[string]struct{} {
@@ -276,6 +319,55 @@ func runtimeErrorDetail(err error) runtimeErrorDetails {
 		return runtimeErrorDetails{Code: runtimeErr.Code, Message: runtimeErr.Message, HTTPStatus: runtimeErr.HTTPStatus, Endpoint: runtimeErr.Endpoint, Hint: runtimeErr.Hint}
 	}
 	return runtimeErrorDetails{Code: "runtime_error", Message: err.Error()}
+}
+
+func mockModelContent(req EnrichRequest) string {
+	fields := map[string]Field{
+		"workflow_stage": {Value: "test", Confidence: 0.92, Source: "local_llm", Explanation: "Mock adapter classifies CI/test feedback as test."},
+		"friction_layer": {Value: "technical", Confidence: 0.90, Source: "local_llm", Explanation: "Mock adapter classifies the blocker as technical."},
+		"friction_type":  {Value: "failed_feedback", Confidence: 0.88, Source: "local_llm", Explanation: "Mock adapter classifies failure feedback."},
+		"tags":           {Value: []string{"ci", "timeout", "llm-mock"}, Confidence: 0.86, Source: "local_llm", Explanation: "Mock adapter adds stable integration-test tags."},
+	}
+	if req.DeterministicBaseline != nil {
+		if minutes, ok := req.DeterministicBaseline["time_lost_minutes"]; ok {
+			fields["time_lost_minutes"] = Field{Value: minutes, Confidence: 0.95, Source: "observed_text", Explanation: "Mock adapter preserves baseline duration."}
+		}
+	}
+	payload, _ := json.Marshal(map[string]any{"fields": fields, "warnings": []string{}})
+	return string(payload)
+}
+
+func traceIDFromHeader(traceparent string) string {
+	parts := strings.Split(traceparent, "-")
+	if len(parts) >= 2 {
+		return parts[1]
+	}
+	return ""
+}
+
+func (s *Service) logOutput(requestID, traceID, jobID, status string, started time.Time, resp EnrichResponse, errorCode string) {
+	fields := map[string]any{}
+	for name, field := range resp.Fields {
+		fields[name] = map[string]any{"value": field.Value, "confidence": field.Confidence}
+	}
+	s.logger.Info("llm adapter output normalized",
+		"trace_id", traceID,
+		"request_id", requestID,
+		"job_id", jobID,
+		"status", status,
+		"adapter_version", AdapterVersion,
+		"model_runtime", ModelRuntime,
+		"model_name", s.cfg.Model,
+		"runtime_url", s.cfg.RuntimeURL,
+		"timeout_ms", s.cfg.RequestTimeout.Milliseconds(),
+		"duration_ms", s.now().Sub(started).Milliseconds(),
+		"field_count", len(resp.Fields),
+		"accepted_field_count", len(resp.Fields),
+		"warning_count", len(resp.Warnings),
+		"warnings", resp.Warnings,
+		"error_code", errorCode,
+		"fields", fields,
+	)
 }
 
 func (s *Service) log(requestID, status string, started time.Time, accepted, warnings int, errorCode string, extra ...any) {

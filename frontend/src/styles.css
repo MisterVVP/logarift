@@ -112,3 +112,28 @@ time { color: #64748b; white-space: nowrap; font-size: 13px; }
   .event-item, .inference-preview, .section-heading { flex-direction: column; align-items: flex-start; }
   .cards-row { grid-template-columns: 1fr; }
 }
+
+.preview-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.pill[class*="enrichment-"] {
+  background: #eef2ff;
+  color: #3730a3;
+}
+
+.pill.enrichment-succeeded,
+.pill.enrichment-partially_succeeded {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pill.enrichment-failed,
+.pill.enrichment-timed_out,
+.pill.enrichment-not_queued {
+  background: #fee2e2;
+  color: #991b1b;
+}

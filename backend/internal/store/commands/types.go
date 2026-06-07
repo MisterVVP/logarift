@@ -24,6 +24,15 @@ type DeleteFrictionEvent struct {
 	ID      bson.ObjectID
 }
 
+type CreateLLMEnrichmentJob struct {
+	Context context.Context
+	Job     *domain.LLMEnrichmentJob
+}
+type UpdateLLMEnrichmentJob struct {
+	Context context.Context
+	Job     *domain.LLMEnrichmentJob
+}
+
 type CreateWorkGoal struct {
 	Context context.Context
 	Goal    *domain.WorkGoal

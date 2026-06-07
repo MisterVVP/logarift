@@ -70,6 +70,14 @@ ollama create logarift-enricher-qwen3-8b -f llm-adapter/modelfiles/logarift-enri
 export LOGARIFT_LLM_MODEL=logarift-enricher-qwen3-8b
 ```
 
+Create the optional stronger 14B alias when the machine has enough RAM/VRAM and you want to compare model quality after verifying prompt/schema logs:
+
+```bash
+ollama pull qwen3:14b
+ollama create logarift-enricher-qwen3-14b -f llm-adapter/modelfiles/logarift-enricher-qwen3-14b.Modelfile
+export LOGARIFT_LLM_MODEL=logarift-enricher-qwen3-14b
+```
+
 Create the stronger Qwen3.6 alias:
 
 ```bash

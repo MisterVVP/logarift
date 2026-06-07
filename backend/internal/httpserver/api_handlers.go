@@ -24,6 +24,7 @@ func (s *Server) registerAPIRoutes() {
 		s.router.HandleFunc("POST /api/v1/friction-events", s.createFrictionEvent)
 		s.router.HandleFunc("GET /api/v1/friction-events", s.listFrictionEvents)
 		s.router.HandleFunc("GET /api/v1/friction-events/{id}", s.getFrictionEvent)
+		s.router.HandleFunc("GET /api/v1/enrichment-jobs/{id}", s.getLLMEnrichmentJob)
 		s.router.HandleFunc("PUT /api/v1/friction-events/{id}", s.updateFrictionEvent)
 		s.router.HandleFunc("DELETE /api/v1/friction-events/{id}", s.deleteFrictionEvent)
 	}
@@ -55,12 +56,12 @@ func (s *Server) createQuickFrictionEvent(w http.ResponseWriter, r *http.Request
 		writeInvalidJSON(w)
 		return
 	}
-	event, err := s.api.friction.CreateQuick(r.Context(), req)
+	result, err := s.api.friction.CreateQuick(r.Context(), req)
 	if err != nil {
 		writeServiceError(w, err)
 		return
 	}
-	writeJSON(w, http.StatusCreated, map[string]any{"event": event})
+	writeJSON(w, http.StatusCreated, map[string]any{"event": result.Event, "enrichment": result.Enrichment})
 }
 
 func (s *Server) createFrictionEvent(w http.ResponseWriter, r *http.Request) {
@@ -108,6 +109,16 @@ func (s *Server) getFrictionEvent(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"event": event})
 }
+
+func (s *Server) getLLMEnrichmentJob(w http.ResponseWriter, r *http.Request) {
+	job, err := s.api.friction.GetLLMEnrichmentJob(r.Context(), r.PathValue("id"))
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"job": job})
+}
+
 func (s *Server) updateFrictionEvent(w http.ResponseWriter, r *http.Request) {
 	var req friction.Request
 	if err := decodeJSON(r, &req); err != nil {

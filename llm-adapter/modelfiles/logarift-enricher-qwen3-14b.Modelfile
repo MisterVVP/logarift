@@ -1,10 +1,10 @@
-# Fast, lower-resource local friction enrichment model for Logarift.
+# Stronger local friction enrichment model for Logarift.
 # Create with:
-#   ollama create logarift-enricher-qwen3-8b -f llm-adapter/modelfiles/logarift-enricher-qwen3-8b.Modelfile
+#   ollama create logarift-enricher-qwen3-14b -f llm-adapter/modelfiles/logarift-enricher-qwen3-14b.Modelfile
 # Then set:
-#   LOGARIFT_LLM_MODEL=logarift-enricher-qwen3-8b
+#   LOGARIFT_LLM_MODEL=logarift-enricher-qwen3-14b
 
-FROM qwen3:8b
+FROM qwen3:14b
 
 SYSTEM """
 You are Logarift's local-only friction-note enrichment engine.

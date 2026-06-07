@@ -14,6 +14,22 @@ services:
       retries: 12
       start_period: 5s
 
+  valkey:
+    image: valkey/valkey:9.1.0-alpine
+    container_name: logarift-valkey
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    volumes:
+      - logarift_valkey_data:/data
+    command: ["valkey-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "valkey-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 5s
+
   math-engine:
     build:
       context: .
@@ -44,6 +60,7 @@ services:
       LOGARIFT_LLM_TRUNCATION_STRATEGY: head_tail
       LOGARIFT_LLM_LOG_PROMPTS: "false"
       LOGARIFT_LLM_LOG_RESPONSES: "false"
+      LOGARIFT_LLM_MOCK_RESPONSE_ENABLED: ${LOGARIFT_LLM_MOCK_RESPONSE_ENABLED:-false}
     ports:
       - "127.0.0.1:8091:8091"
     extra_hosts:
@@ -70,12 +87,19 @@ services:
       LOGARIFT_LLM_ADAPTER_TIMEOUT_MS: ${LOGARIFT_LLM_ADAPTER_TIMEOUT_MS:-15000}
       LOGARIFT_LLM_ADAPTER_MIN_CONFIDENCE: ${LOGARIFT_LLM_ADAPTER_MIN_CONFIDENCE:-0.70}
       LOGARIFT_LLM_ADAPTER_PROMPT_PRIVACY_MODE: ${LOGARIFT_LLM_ADAPTER_PROMPT_PRIVACY_MODE:-text_only}
+      LOGARIFT_VALKEY_ENABLED: ${LOGARIFT_VALKEY_ENABLED:-true}
+      LOGARIFT_VALKEY_URL: valkey://valkey:6379
+      LOGARIFT_VALKEY_STREAM: logarift:llm_enrichment_jobs
+      LOGARIFT_VALKEY_GROUP: logarift-backend
+      LOGARIFT_VALKEY_CONSUMER: backend-1
     ports:
       - "127.0.0.1:8080:8080"
     volumes:
       - logarift_uploads:/var/lib/logarift/uploads
     depends_on:
       mongodb:
+        condition: service_healthy
+      valkey:
         condition: service_healthy
       math-engine:
         condition: service_started
@@ -97,4 +121,5 @@ services:
 
 volumes:
   logarift_mongodb_data:
+  logarift_valkey_data:
   logarift_uploads:

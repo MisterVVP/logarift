@@ -26,6 +26,10 @@ const (
 	defaultLLMAdapterTimeoutMS     = 15000
 	defaultLLMAdapterMinConfidence = 0.70
 	defaultLLMAdapterPrivacyMode   = "text_only"
+	defaultValkeyURL               = "valkey://localhost:6379"
+	defaultValkeyStream            = "logarift:llm_enrichment_jobs"
+	defaultValkeyGroup             = "logarift-backend"
+	defaultValkeyConsumer          = "backend-1"
 )
 
 // Config contains runtime settings for the local-first backend.
@@ -46,6 +50,11 @@ type Config struct {
 	LLMAdapterMinConfidence      float64
 	LLMAdapterPromptPrivacyMode  string
 	LLMAdapterAllowRemoteRuntime bool
+	ValkeyEnabled                bool
+	ValkeyURL                    string
+	ValkeyStream                 string
+	ValkeyGroup                  string
+	ValkeyConsumer               string
 }
 
 // Load reads configuration from environment variables and applies local-first
@@ -69,6 +78,11 @@ func Load() (Config, error) {
 		LLMAdapterMinConfidence:      defaultLLMAdapterMinConfidence,
 		LLMAdapterPromptPrivacyMode:  getenv("LOGARIFT_LLM_ADAPTER_PROMPT_PRIVACY_MODE", defaultLLMAdapterPrivacyMode),
 		LLMAdapterAllowRemoteRuntime: getenvBool("LOGARIFT_LLM_ADAPTER_ALLOW_REMOTE_RUNTIME", false),
+		ValkeyEnabled:                getenvBool("LOGARIFT_VALKEY_ENABLED", false),
+		ValkeyURL:                    getenv("LOGARIFT_VALKEY_URL", defaultValkeyURL),
+		ValkeyStream:                 getenv("LOGARIFT_VALKEY_STREAM", defaultValkeyStream),
+		ValkeyGroup:                  getenv("LOGARIFT_VALKEY_GROUP", defaultValkeyGroup),
+		ValkeyConsumer:               getenv("LOGARIFT_VALKEY_CONSUMER", defaultValkeyConsumer),
 	}
 
 	readinessTimeout, err := getenvDurationMS("LOGARIFT_READINESS_TIMEOUT_MS", defaultReadinessTimeoutMS)
@@ -168,6 +182,22 @@ func (c Config) Validate() error {
 	if c.LLMAdapterPromptPrivacyMode != "text_only" && c.LLMAdapterPromptPrivacyMode != "markdown" {
 		return errors.New("LOGARIFT_LLM_ADAPTER_PROMPT_PRIVACY_MODE must be text_only or markdown")
 	}
+	parsedValkeyURL, err := url.Parse(c.ValkeyURL)
+	if err != nil || parsedValkeyURL.Scheme == "" || parsedValkeyURL.Host == "" {
+		return fmt.Errorf("LOGARIFT_VALKEY_URL must be an absolute valkey:// or redis:// URL, got %q", c.ValkeyURL)
+	}
+	if parsedValkeyURL.Scheme != "valkey" && parsedValkeyURL.Scheme != "redis" {
+		return fmt.Errorf("LOGARIFT_VALKEY_URL must use valkey or redis scheme, got %q", parsedValkeyURL.Scheme)
+	}
+	if strings.TrimSpace(c.ValkeyStream) == "" {
+		return errors.New("LOGARIFT_VALKEY_STREAM must not be empty")
+	}
+	if strings.TrimSpace(c.ValkeyGroup) == "" {
+		return errors.New("LOGARIFT_VALKEY_GROUP must not be empty")
+	}
+	if strings.TrimSpace(c.ValkeyConsumer) == "" {
+		return errors.New("LOGARIFT_VALKEY_CONSUMER must not be empty")
+	}
 	return nil
 }
 
@@ -187,6 +217,9 @@ func (c Config) PublicStatus() map[string]any {
 		"upload_dir":             c.UploadDir,
 		"llm_adapter_enabled":    c.LLMAdapterEnabled,
 		"llm_adapter_url":        c.LLMAdapterURL,
+		"valkey_enabled":         c.ValkeyEnabled,
+		"valkey_url_configured":  c.ValkeyURL != "",
+		"valkey_stream":          c.ValkeyStream,
 	}
 
 }
