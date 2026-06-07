@@ -60,17 +60,25 @@ type AllowedValues struct {
 }
 
 type Response struct {
-	SchemaVersion  string           `json:"schema_version"`
-	RequestID      string           `json:"request_id"`
-	TraceID        string           `json:"trace_id,omitempty"`
-	AdapterVersion string           `json:"adapter_version"`
-	ModelRuntime   string           `json:"model_runtime"`
-	ModelName      string           `json:"model_name"`
-	ModelDigest    string           `json:"model_digest,omitempty"`
-	PromptVersion  string           `json:"prompt_version"`
-	DurationMS     int64            `json:"duration_ms"`
-	Fields         map[string]Field `json:"fields"`
-	Warnings       []string         `json:"warnings"`
+	SchemaVersion      string              `json:"schema_version"`
+	RequestID          string              `json:"request_id"`
+	TraceID            string              `json:"trace_id,omitempty"`
+	AdapterVersion     string              `json:"adapter_version"`
+	ModelRuntime       string              `json:"model_runtime"`
+	ModelName          string              `json:"model_name"`
+	ModelDigest        string              `json:"model_digest,omitempty"`
+	PromptVersion      string              `json:"prompt_version"`
+	DurationMS         int64               `json:"duration_ms"`
+	Fields             map[string]Field    `json:"fields"`
+	Warnings           []string            `json:"warnings"`
+	TruncationMetadata *TruncationMetadata `json:"truncation,omitempty"`
+}
+
+type TruncationMetadata struct {
+	Truncated              bool   `json:"truncated"`
+	OriginalCharacterCount int    `json:"original_character_count"`
+	RetainedCharacterCount int    `json:"retained_character_count"`
+	Strategy               string `json:"strategy"`
 }
 
 type Field struct {
