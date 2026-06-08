@@ -148,7 +148,44 @@ helm upgrade --install logarift oci://ghcr.io/mistervvp/charts/logarift \
   --version 0.1.0
 ```
 
-Container images are published to `ghcr.io/mistervvp/logarift-api`, `ghcr.io/mistervvp/logarift-frontend`, `ghcr.io/mistervvp/logarift-math-engine`, and `ghcr.io/mistervvp/logarift-llm-adapter`. GitHub Releases include the packaged Helm chart, repository source archives, and checksums; pushes to `dev-*` branches publish development image tags and development chart versions for pre-release testing. See `docs/runbooks/release_packages.md` for the complete publishing and install workflow.
+Container images are published to `ghcr.io/mistervvp/logarift-api`, `ghcr.io/mistervvp/logarift-frontend`, `ghcr.io/mistervvp/logarift-math-engine`, and `ghcr.io/mistervvp/logarift-llm-adapter`. The source chart pins the stable `0.1.0` image tag for these application images; packaged release and `dev-*` charts are rewritten by the release workflow to point at the matching release or branch image tag. GitHub Releases include the packaged Helm chart, repository source archives, and checksums; pushes to `dev-*` branches publish development image tags and development chart versions for pre-release testing. See `docs/runbooks/release_packages.md` for the complete publishing and install workflow.
+
+### Local Kubernetes quick start
+
+For MicroK8s, enable DNS, hostpath storage, Helm, and the MicroK8s routing addon. The addon name is `ingress`, but current MicroK8s installs include Gateway API support and expose a Traefik Gateway that this chart can attach to without creating Kubernetes Ingress objects:
+
+```bash
+microk8s status --wait-ready
+microk8s enable dns hostpath-storage helm3 ingress
+microk8s kubectl create namespace logarift
+cat > /tmp/logarift-microk8s-values.yaml <<'EOF'
+gateway:
+  enabled: true
+  create: false
+httpRoute:
+  parentRefs:
+    - name: traefik-gateway
+      namespace: ingress
+  hostnames:
+    - logarift.local
+EOF
+microk8s helm3 upgrade --install logarift charts/logarift \
+  --namespace logarift \
+  --values /tmp/logarift-microk8s-values.yaml
+```
+
+Add `127.0.0.1 logarift.local` to your workstation hosts file if your MicroK8s routing setup does not already resolve that name, then open `http://logarift.local`.
+
+For Minikube, kind, Docker Desktop Kubernetes, and similar local clusters without a Gateway API controller, install the chart with defaults and port-forward the frontend Service:
+
+```bash
+kubectl create namespace logarift
+helm upgrade --install logarift charts/logarift --namespace logarift
+kubectl -n logarift rollout status deploy/logarift-frontend
+kubectl -n logarift port-forward svc/logarift-frontend 5173:5173
+```
+
+Open `http://localhost:5173`. If your local cluster has a Gateway API implementation, use the same `gateway.enabled=true` chart values and point `httpRoute.parentRefs` at that implementation's Gateway.
 
 ## API Overview
 

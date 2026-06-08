@@ -17,7 +17,7 @@ helm upgrade --install logarift oci://ghcr.io/mistervvp/charts/logarift \
   --version 0.1.0
 ```
 
-The chart defaults to application images published under `ghcr.io/mistervvp`: `logarift-api`, `logarift-frontend`, `logarift-math-engine`, and `logarift-llm-adapter`. If the GHCR packages are private, authenticate Helm and configure Kubernetes image pull secrets before installing.
+The chart defaults to stable `0.1.0` application images published under `ghcr.io/mistervvp`: `logarift-api`, `logarift-frontend`, `logarift-math-engine`, and `logarift-llm-adapter`. Packaged release and `dev-*` charts are rewritten by the release workflow to use the matching release or branch image tag. If the GHCR packages are private, authenticate Helm and configure Kubernetes image pull secrets before installing.
 
 Port-forward the frontend when Gateway API exposure is disabled:
 
@@ -25,6 +25,41 @@ Port-forward the frontend when Gateway API exposure is disabled:
 kubectl port-forward svc/logarift-frontend 5173:5173
 ```
 
+
+## Local Kubernetes quick start
+
+MicroK8s users can enable DNS, hostpath storage, Helm, and the MicroK8s routing addon. The addon is named `ingress`, but current MicroK8s versions include Gateway API support and expose a Traefik Gateway that this chart can attach to without creating Kubernetes Ingress resources:
+
+```bash
+microk8s status --wait-ready
+microk8s enable dns hostpath-storage helm3 ingress
+microk8s kubectl create namespace logarift
+cat > /tmp/logarift-microk8s-values.yaml <<'EOF'
+gateway:
+  enabled: true
+  create: false
+httpRoute:
+  parentRefs:
+    - name: traefik-gateway
+      namespace: ingress
+  hostnames:
+    - logarift.local
+EOF
+microk8s helm3 upgrade --install logarift charts/logarift \
+  --namespace logarift \
+  --values /tmp/logarift-microk8s-values.yaml
+```
+
+For Minikube, kind, Docker Desktop Kubernetes, and other local clusters without a Gateway API controller, install with defaults and use port-forwarding:
+
+```bash
+kubectl create namespace logarift
+helm upgrade --install logarift charts/logarift --namespace logarift
+kubectl -n logarift rollout status deploy/logarift-frontend
+kubectl -n logarift port-forward svc/logarift-frontend 5173:5173
+```
+
+Open `http://localhost:5173`. If your local cluster has a Gateway API implementation, set `gateway.enabled=true` and attach `httpRoute.parentRefs` to that implementation's Gateway.
 
 ## Gateway API exposure
 
@@ -81,7 +116,7 @@ Each component exposes optional Kubernetes placement settings with safe defaults
 - `resources`
 - `podAnnotations` and `podLabels`
 
-The backend also supports configurable upload/export persistence, probes, a PodDisruptionBudget, and additional environment variables.
+The backend also supports configurable upload/export persistence, probes, a PodDisruptionBudget, and additional environment variables. The default app container `securityContext` drops all Linux capabilities and disables privilege escalation; this is safe for Logarift app containers because they listen on unprivileged ports and do not require kernel-level privileges. MongoDB and Valkey StatefulSets keep their own image defaults instead of inheriting this app-container security context.
 
 ## Development package testing
 

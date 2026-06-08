@@ -19,6 +19,7 @@ serviceAccount:
 
 podSecurityContext: {}
 
+# securityContext -- App container security defaults. Dropping all Linux capabilities is safe for Logarift app containers because they run on unprivileged ports and do not need kernel-level privileges.
 securityContext:
   allowPrivilegeEscalation: false
   capabilities:
@@ -29,7 +30,7 @@ backend:
   replicaCount: 1
   image:
     repository: ghcr.io/mistervvp/logarift-api
-    tag: ""
+    tag: "0.1.0"
     digest: ""
     pullPolicy: IfNotPresent
   service:
@@ -75,7 +76,7 @@ frontend:
   replicaCount: 1
   image:
     repository: ghcr.io/mistervvp/logarift-frontend
-    tag: ""
+    tag: "0.1.0"
     digest: ""
     pullPolicy: IfNotPresent
   service:
@@ -109,7 +110,7 @@ mathEngine:
   replicaCount: 1
   image:
     repository: ghcr.io/mistervvp/logarift-math-engine
-    tag: ""
+    tag: "0.1.0"
     digest: ""
     pullPolicy: IfNotPresent
   service:
@@ -145,7 +146,7 @@ llmAdapter:
   replicaCount: 1
   image:
     repository: ghcr.io/mistervvp/logarift-llm-adapter
-    tag: ""
+    tag: "0.1.0"
     digest: ""
     pullPolicy: IfNotPresent
   service:

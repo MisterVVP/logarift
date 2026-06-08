@@ -120,6 +120,36 @@ jobs:
           echo "chart_version=$version" >> "$GITHUB_OUTPUT"
           echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
 
+
+      - name: Set packaged chart image tags
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          values_path = Path("${{ env.CHART_DIR }}") / "values.yaml"
+          image_tag = "${{ steps.versions.outputs.app_version }}"
+          repositories = {
+              "ghcr.io/mistervvp/logarift-api",
+              "ghcr.io/mistervvp/logarift-frontend",
+              "ghcr.io/mistervvp/logarift-math-engine",
+              "ghcr.io/mistervvp/logarift-llm-adapter",
+          }
+          lines = values_path.read_text().splitlines(keepends=True)
+          rewrite_next_tag = False
+          for index, line in enumerate(lines):
+              stripped = line.strip()
+              if stripped.startswith("repository:"):
+                  rewrite_next_tag = stripped.split(":", 1)[1].strip() in repositories
+                  continue
+              if rewrite_next_tag and stripped.startswith("tag:"):
+                  indent = line[: len(line) - len(line.lstrip())]
+                  newline = "\n" if line.endswith("\n") else ""
+                  lines[index] = f'{indent}tag: "{image_tag}"{newline}'
+                  rewrite_next_tag = False
+          values_path.write_text("".join(lines))
+          PY
+
       - name: Lint Helm chart
         run: helm lint "$CHART_DIR"
 

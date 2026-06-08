@@ -38,7 +38,7 @@ This supports both release distribution and branch-based integration testing bef
 
 ## Tagging policy
 
-Release publications use the Git tag as the version source. For a release tag such as `v1.2.3`, images and the Helm chart are published with version `1.2.3`. Non-prerelease publications also update `1.2` and `latest` image tags.
+Release publications use the Git tag as the version source. For a release tag such as `v1.2.3`, images and the Helm chart are published with version `1.2.3`. Non-prerelease publications also update `1.2` and `latest` image tags. The source chart pins stable `0.1.0` image tags for local installs, and the release workflow rewrites packaged chart image tags to the release or branch app version before linting and publishing.
 
 Development branch publications use mutable branch image tags and immutable short-SHA image tags. For example, pushing branch `dev-helm-ghcr` publishes images tagged like:
 
