@@ -1,0 +1,64 @@
+{{- if .Values.gateway.enabled -}}
+{{- if and (not .Values.gateway.create) (empty .Values.gateway.name) (empty .Values.httpRoute.parentRefs) -}}
+{{- fail "gateway.enabled=true requires gateway.create=true, gateway.name, or httpRoute.parentRefs so the HTTPRoute can attach to a Gateway" -}}
+{{- end -}}
+{{- if .Values.gateway.create }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: {{ default (include "logarift.fullname" .) .Values.gateway.name }}
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+    {{- with .Values.gateway.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.gateway.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  gatewayClassName: {{ required "gateway.className is required when gateway.create=true" .Values.gateway.className | quote }}
+  listeners:
+    {{- toYaml .Values.gateway.listeners | nindent 4 }}
+---
+{{- end }}
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: {{ include "logarift.fullname" . }}
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+    {{- with .Values.httpRoute.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- with .Values.httpRoute.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+spec:
+  parentRefs:
+    {{- if .Values.httpRoute.parentRefs }}
+    {{- toYaml .Values.httpRoute.parentRefs | nindent 4 }}
+    {{- else }}
+    - name: {{ default (include "logarift.fullname" .) .Values.gateway.name }}
+      {{- with .Values.gateway.namespace }}
+      namespace: {{ . | quote }}
+      {{- end }}
+    {{- end }}
+  {{- with .Values.httpRoute.hostnames }}
+  hostnames:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  rules:
+    {{- range .Values.httpRoute.rules }}
+    - matches:
+        {{- range .matches }}
+        - path:
+            type: {{ default "PathPrefix" .path.type }}
+            value: {{ .path.value | quote }}
+        {{- end }}
+      backendRefs:
+        - name: {{ include "logarift.fullname" $ }}-{{ .service }}
+          port: {{ index $.Values .service "service" "port" }}
+    {{- end }}
+{{- end }}

@@ -1,0 +1,184 @@
+name: Release packages
+
+on:
+  release:
+    types: [published]
+  push:
+    branches:
+      - dev-*
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  packages: write
+
+concurrency:
+  group: release-packages-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAMESPACE: mistervvp
+  CHART_DIR: charts/logarift
+  CHART_REGISTRY_PATH: ghcr.io/mistervvp/charts
+
+jobs:
+  docker-images:
+    name: Publish ${{ matrix.component }} image
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: backend
+            image: logarift-api
+            dockerfile: backend/Dockerfile
+          - component: frontend
+            image: logarift-frontend
+            dockerfile: frontend/Dockerfile
+          - component: math-engine
+            image: logarift-math-engine
+            dockerfile: math-engine/Dockerfile
+          - component: llm-adapter
+            image: logarift-llm-adapter
+            dockerfile: llm-adapter/Dockerfile
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate image metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAMESPACE }}/${{ matrix.image }}
+          tags: |
+            type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
+            type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' && !github.event.release.prerelease }}
+            type=raw,value=latest,enable=${{ github.event_name == 'release' && !github.event.release.prerelease }}
+            type=ref,event=branch,enable=${{ github.event_name != 'release' }}
+            type=sha,format=short,prefix=sha-
+          labels: |
+            org.opencontainers.image.title=Logarift ${{ matrix.component }}
+            org.opencontainers.image.vendor=Logarift
+
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+          provenance: true
+          sbom: true
+
+  helm-chart:
+    name: Publish Helm chart and release assets
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: latest
+
+      - name: Resolve package versions
+        id: versions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          chart_base_version=$(awk -F': *' '$1 == "version" { print $2; exit }' "$CHART_DIR/Chart.yaml" | tr -d '"')
+
+          if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
+            version="${GITHUB_REF_NAME#v}"
+            app_version="$version"
+          else
+            safe_ref=$(printf '%s' "${GITHUB_REF_NAME}" \
+              | tr '[:upper:]' '[:lower:]' \
+              | sed -E 's/[^a-z0-9]+/-/g; s/^-+|-+$//g')
+            version="${chart_base_version}-dev.${GITHUB_RUN_NUMBER}"
+            app_version="$safe_ref"
+          fi
+
+          echo "chart_version=$version" >> "$GITHUB_OUTPUT"
+          echo "app_version=$app_version" >> "$GITHUB_OUTPUT"
+
+
+      - name: Set packaged chart image tags
+        shell: bash
+        run: |
+          python3 <<'PY'
+          from pathlib import Path
+
+          values_path = Path("${{ env.CHART_DIR }}") / "values.yaml"
+          image_tag = "${{ steps.versions.outputs.app_version }}"
+          repositories = {
+              "ghcr.io/mistervvp/logarift-api",
+              "ghcr.io/mistervvp/logarift-frontend",
+              "ghcr.io/mistervvp/logarift-math-engine",
+              "ghcr.io/mistervvp/logarift-llm-adapter",
+          }
+          lines = values_path.read_text().splitlines(keepends=True)
+          rewrite_next_tag = False
+          for index, line in enumerate(lines):
+              stripped = line.strip()
+              if stripped.startswith("repository:"):
+                  rewrite_next_tag = stripped.split(":", 1)[1].strip() in repositories
+                  continue
+              if rewrite_next_tag and stripped.startswith("tag:"):
+                  indent = line[: len(line) - len(line.lstrip())]
+                  newline = "\n" if line.endswith("\n") else ""
+                  lines[index] = f'{indent}tag: "{image_tag}"{newline}'
+                  rewrite_next_tag = False
+          values_path.write_text("".join(lines))
+          PY
+
+      - name: Lint Helm chart
+        run: helm lint "$CHART_DIR"
+
+      - name: Log in to GHCR for Helm OCI
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+
+      - name: Package and push Helm chart
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          helm package "$CHART_DIR" \
+            --destination dist \
+            --version "${{ steps.versions.outputs.chart_version }}" \
+            --app-version "${{ steps.versions.outputs.app_version }}"
+          helm push "dist/logarift-${{ steps.versions.outputs.chart_version }}.tgz" "oci://${CHART_REGISTRY_PATH}"
+
+      - name: Package release source archives
+        if: github.event_name == 'release'
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${{ steps.versions.outputs.chart_version }}"
+          git archive --format=tar.gz --prefix="logarift-${version}/" -o "dist/logarift-${version}-source.tar.gz" "$GITHUB_SHA"
+          git archive --format=zip --prefix="logarift-${version}/" -o "dist/logarift-${version}-source.zip" "$GITHUB_SHA"
+          (cd dist && find . -maxdepth 1 -type f ! -name SHA256SUMS -printf '%f\0' | sort -z | xargs -0 sha256sum > SHA256SUMS)
+
+      - name: Upload GitHub release assets
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh release upload "${GITHUB_REF_NAME}" dist/* --clobber
