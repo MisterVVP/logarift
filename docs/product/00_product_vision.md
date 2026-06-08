@@ -70,7 +70,7 @@ The differentiating ideas are:
 
 1. **Local-first trust model**
 
-   The user owns the data. MVP data stays local.
+   The user owns the data. initial release data stays local.
 
 2. **Friction as a dynamic signal**
 
@@ -82,7 +82,7 @@ The differentiating ideas are:
 
 4. **Explainable formulas**
 
-   MVP scoring should be transparent and configurable later.
+   initial release scoring should be transparent and configurable later.
 
 5. **Intervention-oriented analytics**
 
@@ -94,7 +94,7 @@ The differentiating ideas are:
 
 ## Local-First Principle
 
-The MVP runs locally with:
+The initial release runs locally with:
 
 - Go backend API
 - React + Vite frontend
@@ -117,9 +117,9 @@ It must not become:
 
 Future team features should use aggregation, anonymization or pseudonymization, minimum cohort sizes, and explicit opt-in.
 
-## MVP Vision
+## initial release Vision
 
-The MVP should allow a single local user to:
+The initial release should allow a single local user to:
 
 - create friction events
 - classify events using the original ontology

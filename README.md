@@ -9,7 +9,7 @@ Friction is not only a logged event.
 Friction is a compounding signal that affects cognitive load, flow stability, and systemic delivery drag.
 ```
 
-## Implemented MVP Scope in This Package
+## Implemented Scope in This Package
 
 - three-field quick friction logging with deterministic local enrichment
 - manual CRUD APIs for friction events, work goals, and work sessions
@@ -127,6 +127,20 @@ Frontend: http://localhost:5173
 LLM adapter: http://localhost:8091/health/live
 ```
 
+## Kubernetes Deployment
+
+A Helm chart is available under `charts/logarift` for Kubernetes installs. By default it deploys the frontend, backend, math engine, MongoDB, and Valkey. MongoDB and Valkey can be disabled when using externally managed services:
+
+```bash
+helm upgrade --install logarift charts/logarift \
+  --set mongodb.enabled=false \
+  --set mongodb.external.uri='mongodb://mongo.example:27017' \
+  --set valkey.enabled=false \
+  --set valkey.external.url='redis://valkey.example:6379'
+```
+
+Most Kubernetes placement controls are optional and configurable per component, including `nodeSelector`, `affinity`, pod anti-affinity through `affinity`, `tolerations`, and `topologySpreadConstraints`. The chart also supports existing Secrets for MongoDB and Valkey connection strings, persistence settings, probes, resources, ingress, and optional LLM adapter deployment.
+
 ## API Overview
 
 Health/status:
@@ -151,6 +165,8 @@ POST   /api/v1/friction-events/quick
 POST   /api/v1/friction-events
 GET    /api/v1/friction-events
 GET    /api/v1/friction-events/{id}
+GET    /api/v1/enrichment-jobs/{id}
+GET    /api/v1/enrichment-jobs/{id}/events  # Server-Sent Events stream
 PUT    /api/v1/friction-events/{id}
 DELETE /api/v1/friction-events/{id}
 ```

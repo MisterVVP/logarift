@@ -5,20 +5,16 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MisterVVP/logarift/backend/internal/config"
-	"github.com/MisterVVP/logarift/backend/internal/database"
 	"github.com/MisterVVP/logarift/backend/internal/domain"
 	"github.com/MisterVVP/logarift/backend/internal/store"
+	"github.com/MisterVVP/logarift/backend/internal/testsupport"
 )
 
 func TestFrictionEventListAppliesFiltersAndLimit(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
 	defer cancel()
 
-	client, err := database.Connect(ctx, config.Config{MongoDBURI: "mongodb://localhost:27017", MongoDBDatabase: "unit_filters"})
-	if err != nil {
-		t.Fatalf("Connect() error: %v", err)
-	}
+	client := testsupport.ConnectMongo(t, "unit_filters")
 	defer client.Database().Drop(ctx)
 	stores := New(client)
 

@@ -2,13 +2,13 @@
 
 ## Purpose
 
-This document defines the MVP local-first architecture.
+This document defines the initial release local-first architecture.
 
 The system should be easy to run locally and should not require cloud services.
 
 ## Components
 
-MVP components:
+initial release components:
 
 ```text
 React + Vite frontend
@@ -86,7 +86,7 @@ MongoDB stores:
 - model configs
 - export metadata
 
-MongoDB should run locally through Docker Compose in MVP.
+MongoDB should run locally through Docker Compose in initial release.
 
 ## C++ Math Engine Responsibilities
 
@@ -96,7 +96,7 @@ The engine should:
 
 - read JSON input
 - validate required fields
-- compute MVP scores
+- compute initial release scores
 - return JSON output
 - avoid hidden state
 - be testable independently
@@ -120,7 +120,7 @@ The same binary may retain CLI-compatible stdin/stdout mode for smoke tests, but
 
 The Go backend communicates with the C++ engine over HTTP.
 
-Preferred MVP approach:
+Preferred initial release approach:
 
 ```text
 Go serializes scoring request to JSON
@@ -165,7 +165,7 @@ LOGARIFT_EXPORT_DIR
 
 ## Security Assumptions
 
-MVP is local-only.
+initial release is local-only.
 
 Do not expose MongoDB publicly.
 
@@ -226,7 +226,7 @@ Future local LLM or local ML adapters may be added behind the enrichment boundar
 
 ## Upload flow
 
-For rich notes, the frontend may upload screenshots to the backend through `POST /api/v1/uploads`. The backend writes accepted images to `LOGARIFT_UPLOAD_DIR` and returns a local `/uploads/{filename}` URL. The notes editor inserts that URL into the event notes. No cloud object storage is used in MVP.
+For rich notes, the frontend may upload screenshots to the backend through `POST /api/v1/uploads`. The backend writes accepted images to `LOGARIFT_UPLOAD_DIR` and returns a local `/uploads/{filename}` URL. The notes editor inserts that URL into the event notes. No cloud object storage is used in initial release.
 
 ## Math Engine Observability
 

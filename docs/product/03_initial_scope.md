@@ -1,20 +1,20 @@
-# MVP Scope
+# Initial Release Scope
 
 ## Purpose
 
-This document defines the MVP boundary.
+This document defines the initial release boundary.
 
-The MVP should validate the core product concept with the smallest useful local-first implementation.
+The initial release should validate the core product concept with the smallest useful local-first implementation.
 
-## MVP Product Statement
+## Product Statement
 
-The MVP allows a single local user to manually log Developer Experience friction, classify it with the original ontology, compute basic mathematical scores, and inspect local analytics through a dashboard.
+The initial release allows a single local user to manually log Developer Experience friction, classify it with the original ontology, compute basic mathematical scores, and inspect local analytics through a dashboard.
 
-## Included in MVP
+## Included in Initial Release
 
 ### Local Single-User Mode
 
-The MVP runs locally and assumes one user.
+The initial release runs locally and assumes one user.
 
 No authentication is required.
 
@@ -60,7 +60,7 @@ The user can create work sessions and link events to sessions.
 
 ### MongoDB Persistence
 
-The MVP uses MongoDB as the local data store.
+The initial release uses MongoDB as the local data store.
 
 Required collections:
 
@@ -83,11 +83,11 @@ The dashboard should show:
 - friction by type
 - top time-loss sources
 - top cognitive-load sources
-- score cards for MVP metrics
+- score cards for initial release metrics
 
 ### C++ Scoring Service
 
-The MVP includes a deterministic C++ scoring application. In Docker Compose it runs as a separate HTTP service. For local tests it also supports CLI-compatible stdin/stdout mode.
+The initial release includes a deterministic C++ scoring application. In Docker Compose it runs as a separate HTTP service. For local tests it also supports CLI-compatible stdin/stdout mode.
 
 The service receives JSON input and returns JSON output.
 
@@ -103,7 +103,7 @@ The user can export events and score snapshots as JSON.
 
 The repository includes a small sample dataset for local testing and demo mode.
 
-## Excluded from MVP
+## Excluded from Initial Release
 
 The following are explicitly out of scope:
 
@@ -126,21 +126,21 @@ plugin system
 mobile application
 ```
 
-## MVP Non-Goals
+## Non-Goals
 
-The MVP must not attempt to prove causal relationships.
+The initial release must not attempt to prove causal relationships.
 
-The MVP must not claim that the mathematical scores are scientifically validated universal metrics.
+The initial release must not claim that the mathematical scores are scientifically validated universal metrics.
 
-The MVP must not rank developers.
+The initial release must not rank developers.
 
-The MVP must not silently collect telemetry.
+The initial release must not silently collect telemetry.
 
-The MVP must not require cloud services.
+The initial release must not require cloud services.
 
-## MVP Success Criteria
+## Success Criteria
 
-The MVP is successful when:
+The initial release is successful when:
 
 - local setup works with Docker Compose
 - the user can log a friction event in under 15 seconds
@@ -153,7 +153,7 @@ The MVP is successful when:
 
 ## Future Stages
 
-After MVP, possible stages include:
+After initial release, possible stages include:
 
 1. local Git and CI importers
 2. advanced C++ math engine

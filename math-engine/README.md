@@ -1,6 +1,6 @@
 # Logarift Math Engine
 
-The MVP math engine is a small deterministic C++ application. It can run in two modes:
+The initial release math engine is a small deterministic C++ application. It can run in two modes:
 
 - HTTP service mode for Docker Compose and backend integration.
 - CLI-compatible mode for local smoke tests, where it reads JSON from stdin and writes JSON to stdout.
@@ -66,21 +66,21 @@ LOGARIFT_MATH_ENGINE_URL=http://math-engine:8090
 
 ```json
 {
-  "model_version": "mvp-0.1",
+  "model_version": "model-0.1",
   "period_start": "2026-06-01T00:00:00Z",
   "period_end": "2026-06-07T23:59:59Z",
   "events": []
 }
 ```
 
-## Implemented MVP scores
+## Implemented initial release scores
 
 - Cognitive Load Accumulator (`cla`)
 - Friction Compounding Index (`fci`)
 - Systemic Drag Coefficient (`sdc`)
 - per-event Friction Cost Score (`fcs`)
 
-The formulas are deterministic MVP product hypotheses and are not presented as universal validated scientific metrics.
+The formulas are deterministic initial release product hypotheses and are not presented as universal validated scientific metrics.
 
 ## Observability
 

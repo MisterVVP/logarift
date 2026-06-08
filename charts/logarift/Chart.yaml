@@ -1,0 +1,16 @@
+apiVersion: v2
+name: logarift
+description: Local-first Developer Experience friction logging stack
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+kubeVersion: ">=1.27.0-0"
+keywords:
+  - developer-experience
+  - friction
+  - local-first
+home: https://github.com/MisterVVP/logarift
+sources:
+  - https://github.com/MisterVVP/logarift
+maintainers:
+  - name: Logarift maintainers

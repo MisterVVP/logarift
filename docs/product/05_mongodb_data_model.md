@@ -2,11 +2,11 @@
 
 ## Purpose
 
-This document defines the MVP MongoDB data model.
+This document defines the initial release MongoDB data model.
 
 MongoDB is used because friction data is naturally document-shaped and expected to evolve.
 
-The MVP should use versioned documents rather than SQL migrations.
+The initial release should use versioned documents rather than SQL migrations.
 
 ## General Document Rules
 
@@ -24,7 +24,7 @@ IDs should use MongoDB ObjectId by default unless a stable external ID is needed
 
 ## Collections
 
-MVP collections:
+initial release collections:
 
 ```text
 friction_events
@@ -190,7 +190,7 @@ Example:
 {
   "_id": "ObjectId",
   "schema_version": 1,
-  "model_version": "mvp-0.1",
+  "model_version": "model-0.1",
   "model_config_id": "ObjectId",
   "period_start": "2026-06-01T00:00:00Z",
   "period_end": "2026-06-07T23:59:59Z",
@@ -243,8 +243,8 @@ Example:
 {
   "_id": "ObjectId",
   "schema_version": 1,
-  "model_version": "mvp-0.1",
-  "name": "Default MVP model",
+  "model_version": "model-0.1",
+  "name": "Default model",
   "parameters": {
     "cla_decay": 0.85,
     "severity_multiplier": 1.2,
@@ -305,7 +305,7 @@ status
 
 ## Validation
 
-MVP may use application-level validation in Go.
+initial release may use application-level validation in Go.
 
 MongoDB JSON schema validation may be added later for stronger guarantees.
 
@@ -322,7 +322,7 @@ Rules:
 
 ## Data Retention
 
-MVP keeps data until the user deletes it.
+initial release keeps data until the user deletes it.
 
 Future versions may include local retention settings.
 

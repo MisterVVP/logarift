@@ -160,3 +160,23 @@ func TestCreateQuickEnrichesAndPersistsCanonicalFields(t *testing.T) {
 		t.Fatalf("expected 60 minutes from 1h note, got %d", got.TimeLostMinutes)
 	}
 }
+
+func TestCreateQuickMarksLLMDisabledWhenAdapterIsAbsent(t *testing.T) {
+	now := time.Date(2026, 6, 4, 22, 0, 0, 0, time.UTC)
+	repo := &fakeRepo{}
+	svc := NewService(dispatcherForRepo(t, repo), fixedClock{now})
+	got, err := svc.CreateQuick(context.Background(), QuickRequest{
+		OccurredAt:    now,
+		FrictionLevel: "yellow",
+		NotesMarkdown: "Build failed with a confusing compiler error.",
+	})
+	if err != nil {
+		t.Fatalf("CreateQuick() error: %v", err)
+	}
+	if got.Enrichment.LLMStatus != domain.LLMStatusDisabled {
+		t.Fatalf("expected disabled LLM enrichment, got %#v", got.Enrichment)
+	}
+	if repo.job != nil {
+		t.Fatalf("did not expect LLM job when adapter is absent: %#v", repo.job)
+	}
+}

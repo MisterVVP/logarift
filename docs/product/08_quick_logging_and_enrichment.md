@@ -211,7 +211,7 @@ Design constraints:
 - fallback to deterministic rules when output is invalid
 - confidence and explanation required for every inferred field
 
-Possible local-first runtime options include tools such as Ollama or other local model runtimes, but this MVP iteration does not implement them.
+Possible local-first runtime options include tools such as Ollama or other local model runtimes, but this initial release iteration does not implement them.
 
 ## Future Local ML Classifier
 
@@ -225,7 +225,7 @@ Design constraints:
 - versioned model metadata
 - deterministic fallback rules remain available
 
-Possible implementation options include ONNX Runtime or a small embedded classifier. This MVP iteration only documents the extension point.
+Possible implementation options include ONNX Runtime or a small embedded classifier. This initial release iteration only documents the extension point.
 
 ## Product Rule
 

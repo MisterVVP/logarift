@@ -1,0 +1,26 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "logarift.fullname" . }}-config
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+data:
+  LOGARIFT_API_HOST: "0.0.0.0"
+  LOGARIFT_API_PORT: "8080"
+  LOGARIFT_MONGODB_DATABASE: {{ .Values.mongodb.database | quote }}
+  LOGARIFT_MATH_ENGINE_URL: "http://{{ include "logarift.fullname" . }}-math-engine:{{ .Values.mathEngine.service.port }}"
+  LOGARIFT_EXPORT_DIR: "/var/lib/logarift/exports"
+  LOGARIFT_UPLOAD_DIR: "/var/lib/logarift/uploads"
+  LOGARIFT_LLM_ADAPTER_ENABLED: {{ .Values.llmAdapter.enabled | quote }}
+  LOGARIFT_LLM_ADAPTER_URL: "http://{{ include "logarift.fullname" . }}-llm-adapter:{{ .Values.llmAdapter.service.port }}"
+  LOGARIFT_LLM_ADAPTER_TIMEOUT_MS: {{ .Values.llmAdapter.timeoutMS | quote }}
+  LOGARIFT_LLM_ADAPTER_MIN_CONFIDENCE: {{ .Values.llmAdapter.minConfidence | quote }}
+  LOGARIFT_LLM_ADAPTER_PROMPT_PRIVACY_MODE: {{ .Values.llmAdapter.promptPrivacyMode | quote }}
+  LOGARIFT_LLM_ADAPTER_ALLOW_REMOTE_RUNTIME: {{ .Values.llmAdapter.allowRemoteRuntime | quote }}
+  LOGARIFT_VALKEY_ENABLED: {{ ternary "true" "false" (or .Values.valkey.enabled (ne .Values.valkey.external.url "") (ne .Values.valkey.external.existingSecret "")) | quote }}
+  LOGARIFT_VALKEY_STREAM: {{ .Values.valkey.stream | quote }}
+  LOGARIFT_VALKEY_GROUP: {{ .Values.valkey.group | quote }}
+  LOGARIFT_VALKEY_CONSUMER: {{ .Values.valkey.consumer | quote }}
+  VITE_LOGARIFT_API_BASE_URL: {{ .Values.frontend.apiBaseURL | quote }}
+  LOGARIFT_LLM_ADAPTER_OLLAMA_URL: {{ .Values.llmAdapter.ollamaURL | quote }}
+  LOGARIFT_LLM_ADAPTER_MODEL: {{ .Values.llmAdapter.model | quote }}

@@ -74,7 +74,7 @@ docs + missing             -> documentation / cognitive / missing_documentation
 interrupted + meeting      -> coordination / environmental / interruption
 ```
 
-The engine returns confidence values for inferred fields. Confidence is not used to change the MVP math score yet; it is displayed as data-quality metadata in the UI.
+The engine returns confidence values for inferred fields. Confidence is not used to change the initial release math score yet; it is displayed as data-quality metadata in the UI.
 
 ## Why this is separate from the math engine
 

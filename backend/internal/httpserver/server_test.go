@@ -86,7 +86,7 @@ func TestReadinessReturnsUnavailableWhenMongoPingFails(t *testing.T) {
 	}
 }
 
-func TestStatusExposesMVP2DatabaseAndCapabilities(t *testing.T) {
+func TestStatusExposesDatabaseAndCapabilities(t *testing.T) {
 	server := New(testConfig(), fakeChecker{}, version.BuildInfo{Service: "logarift-api", Version: "test", Commit: "abc"})
 	req := httptest.NewRequest(http.MethodGet, "/api/v1/status", nil)
 	rr := httptest.NewRecorder()
@@ -111,7 +111,7 @@ func TestStatusExposesMVP2DatabaseAndCapabilities(t *testing.T) {
 		t.Fatalf("expected authentication=false, got %#v", capabilities["authentication"])
 	}
 	if capabilities["event_crud"] != false {
-		t.Fatalf("MVP-2 should not expose event CRUD yet")
+		t.Fatalf("status should not expose event CRUD without API services")
 	}
 	database, ok := payload["database"].(map[string]any)
 	if !ok {
@@ -119,5 +119,19 @@ func TestStatusExposesMVP2DatabaseAndCapabilities(t *testing.T) {
 	}
 	if database["driver"] != "go.mongodb.org/mongo-driver/v2" || database["database_name"] != "logarift" || database["ready"] != true {
 		t.Fatalf("unexpected database status: %#v", database)
+	}
+}
+
+func TestTerminalLLMStatusIncludesAllStreamStopStates(t *testing.T) {
+	terminal := []string{"succeeded", "partially_succeeded", "failed", "timed_out", "cancelled", "disabled", "not_queued"}
+	for _, status := range terminal {
+		if !isTerminalLLMStatus(status) {
+			t.Fatalf("expected %q to be terminal", status)
+		}
+	}
+	for _, status := range []string{"not_requested", "queued", "running", ""} {
+		if isTerminalLLMStatus(status) {
+			t.Fatalf("expected %q to be non-terminal", status)
+		}
 	}
 }

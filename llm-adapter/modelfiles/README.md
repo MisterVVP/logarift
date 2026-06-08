@@ -2,7 +2,7 @@
 
 These Modelfiles create optional Ollama model aliases tuned for Logarift's local LLM adapter response contract. They are intentionally aligned with `POST /v1/enrich/friction-event`: the model should return only `fields` and `warnings`, while the Go adapter adds adapter metadata and validates every field before the backend merges anything into canonical event data.
 
-The Modelfiles adapt the external suggestion to Logarift's domain constraints. In particular, they do **not** include `suggested_next_action`, coaching, or recommendation fields because the MVP local adapter must enrich friction events, not advise users or rate productivity.
+The Modelfiles adapt the external suggestion to Logarift's domain constraints. In particular, they do **not** include `suggested_next_action`, coaching, or recommendation fields because the initial release local adapter must enrich friction events, not advise users or rate productivity.
 
 ## Fast lower-resource model
 

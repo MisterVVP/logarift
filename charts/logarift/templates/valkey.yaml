@@ -1,0 +1,80 @@
+{{- if .Values.valkey.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "logarift.fullname" . }}-valkey
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+spec:
+  serviceName: {{ include "logarift.fullname" . }}-valkey
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "logarift.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: valkey
+  template:
+    metadata:
+      labels:
+        {{- include "logarift.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: valkey
+        {{- with .Values.valkey.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.valkey.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      containers:
+        - name: valkey
+          image: {{ .Values.valkey.image.repository }}:{{ .Values.valkey.image.tag }}
+          imagePullPolicy: {{ .Values.valkey.image.pullPolicy }}
+          args: ["valkey-server", "--appendonly", "yes"]
+          ports:
+            - name: valkey
+              containerPort: 6379
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          {{- with .Values.valkey.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- if not .Values.valkey.persistence.enabled }}
+      volumes:
+        - name: data
+          emptyDir: {}
+      {{- end }}
+      {{- include "logarift.podScheduling" .Values.valkey | nindent 6 }}
+  {{- if .Values.valkey.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: {{ toYaml .Values.valkey.persistence.accessModes | nindent 10 }}
+        {{- with .Values.valkey.persistence.storageClassName }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.valkey.persistence.size | quote }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "logarift.fullname" . }}-valkey
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+spec:
+  clusterIP: None
+  ports:
+    - name: valkey
+      port: 6379
+      targetPort: valkey
+  selector:
+    {{- include "logarift.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: valkey
+{{- end }}

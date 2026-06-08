@@ -5,7 +5,7 @@ import (
 	"time"
 )
 
-const DefaultModelVersion = "mvp-0.1"
+const DefaultModelVersion = "model-0.1"
 
 type ModelConfig struct {
 	ID            bson.ObjectID   `bson:"_id,omitempty" json:"id"`
@@ -27,5 +27,5 @@ type ModelParameters struct {
 }
 
 func DefaultModelConfig() ModelConfig {
-	return ModelConfig{SchemaVersion: CurrentSchemaVersion, ModelVersion: DefaultModelVersion, Name: "Default MVP model", Parameters: ModelParameters{CLADecay: 0.85, SeverityMultiplier: 1.2, CognitiveLoadMultiplier: 1.5, InterruptionMultiplier: 2.0, RecoveryMultiplier: 0.3, FCIHalfLifeMinutes: 90}, IsDefault: true}
+	return ModelConfig{SchemaVersion: CurrentSchemaVersion, ModelVersion: DefaultModelVersion, Name: "Default model", Parameters: ModelParameters{CLADecay: 0.85, SeverityMultiplier: 1.2, CognitiveLoadMultiplier: 1.5, InterruptionMultiplier: 2.0, RecoveryMultiplier: 0.3, FCIHalfLifeMinutes: 90}, IsDefault: true}
 }

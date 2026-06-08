@@ -392,7 +392,7 @@ static std::string score_json(const std::string &input) {
     std::ostringstream out;
     out << std::fixed << std::setprecision(4);
     out << "{\n";
-    out << "  \"model_version\": \"mvp-0.1\",\n";
+    out << "  \"model_version\": \"model-0.1\",\n";
     out << "  \"period_start\": \"" << escape_json(period_start) << "\",\n";
     out << "  \"period_end\": \"" << escape_json(period_end) << "\",\n";
     out << "  \"scores\": {\"cla\": " << cla << ", \"fci\": " << fci << ", \"sdc\": " << sdc << "},\n";

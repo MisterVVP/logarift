@@ -16,7 +16,7 @@ The frontend posts these fields to:
 POST /api/v1/friction-events/quick
 ```
 
-The backend then uses deterministic local enrichment rules to infer workflow stage, friction layer, friction type, time loss, resume time, interruptions, and tags.
+The backend then uses deterministic local enrichment rules to infer workflow stage, friction layer, friction type, time loss, resume time, interruptions, and tags. When asynchronous LLM enrichment is queued, the frontend opens `GET /api/v1/enrichment-jobs/{id}/events` as a Server-Sent Events stream and falls back to polling if EventSource is unavailable.
 
 Run directly:
 

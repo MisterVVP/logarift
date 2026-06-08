@@ -1,10 +1,10 @@
-# MVP Math Model
+# Math Model
 
 ## Purpose
 
 This document defines the first deterministic mathematical model for Logarift.
 
-The MVP model is intentionally simple, explainable, and implementation-friendly.
+The initial release model is intentionally simple, explainable, and implementation-friendly.
 
 These formulas are not universal scientific truths. They are product hypotheses inspired by public research on cognitive load, interruptions, flow, queueing, and socio-technical systems.
 
@@ -12,19 +12,19 @@ Parameters should become configurable in later versions.
 
 ## Design Principles
 
-The MVP math model should be:
+The initial release math model should be:
 
 - deterministic
 - explainable
 - easy to test
 - stable for small datasets
-- based on event fields already collected in MVP
+- based on event fields already collected in initial release
 - separated from raw observed data
 - versioned
 
 ## Input Fields
 
-The MVP formulas use:
+The initial release formulas use:
 
 ```text
 severity_self
@@ -40,7 +40,7 @@ friction_layer
 friction_type
 ```
 
-If `recovery_minutes` is not available in the MVP UI, it should default to `0`.
+If `recovery_minutes` is not available in the initial release UI, it should default to `0`.
 
 ## Score 1: Cognitive Load Accumulator
 
@@ -57,7 +57,7 @@ CLA_t = decay * CLA_(t-1)
         - recovery_bonus
 ```
 
-Suggested MVP parameters:
+Suggested initial release parameters:
 
 ```text
 decay = 0.85
@@ -93,7 +93,7 @@ Formula:
 FCI = sum(event_weight * exp(-delta_minutes / half_life))
 ```
 
-Suggested MVP parameters:
+Suggested initial release parameters:
 
 ```text
 half_life = 90 minutes
@@ -124,9 +124,9 @@ Example output field:
 
 ## Score 3: Systemic Drag Coefficient
 
-The MVP Systemic Drag Coefficient estimates waiting burden relative to active work.
+The initial release Systemic Drag Coefficient estimates waiting burden relative to active work.
 
-MVP formula:
+initial release formula:
 
 ```text
 SDC = total_wait_time_minutes / max(total_active_work_minutes, 1)
@@ -155,7 +155,7 @@ rho = arrival_rate / service_rate
 SDC = rho / (1 - rho)
 ```
 
-The queueing formula is not part of MVP implementation unless enough queue data exists.
+The queueing formula is not part of initial release implementation unless enough queue data exists.
 
 Example output field:
 
@@ -198,7 +198,7 @@ The math engine should return:
 
 ```json
 {
-  "model_version": "mvp-0.1",
+  "model_version": "model-0.1",
   "period_start": "2026-06-01T00:00:00Z",
   "period_end": "2026-06-07T23:59:59Z",
   "scores": {
@@ -223,7 +223,7 @@ The math engine should return:
 
 ## Normalization
 
-MVP does not require advanced normalization.
+initial release does not require advanced normalization.
 
 Future versions may normalize by:
 
@@ -264,7 +264,7 @@ wait-like friction type
 
 ## Constraints
 
-Do not use black-box machine learning in MVP.
+Do not use black-box machine learning in initial release.
 
 Do not claim causal certainty.
 
