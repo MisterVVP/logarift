@@ -1,14 +1,14 @@
-# Local-First Architecture
+# Centralized and Local Architecture
 
 ## Purpose
 
-This document defines the initial release local-first architecture.
+This document defines the initial public release architecture for centralized private deployment and local developer operation.
 
-The system should be easy to run locally and should not require cloud services.
+The system should be easy to run as containers or inside Kubernetes for a tech organization, while remaining easy to run locally for DevEx platform developers, contributors, demos, and safe offline validation. It should not require a Logarift cloud service.
 
 ## Components
 
-initial release components:
+Initial release components:
 
 ```text
 React + Vite frontend
@@ -16,9 +16,31 @@ Go backend API
 MongoDB
 C++ math engine service
 Docker Compose
+Helm chart / Kubernetes deployment
 ```
 
 ## Runtime Topology
+
+Centralized deployment:
+
+```text
+Organization browser clients
+  |
+  v
+Gateway / port-forward / private cluster entrypoint
+  |
+  +--> React + Vite frontend
+  |
+  +--> Go backend API
+          |
+          +--> MongoDB, in-cluster or external
+          |
+          +--> C++ math engine service
+          |
+          +--> optional Valkey and LLM adapter
+```
+
+Local developer deployment:
 
 ```text
 Browser
@@ -32,12 +54,14 @@ Go backend API
   +--> MongoDB
   |
   +--> C++ math engine service
+  |
+  +--> optional Valkey and LLM adapter
 ```
 
 ## Primary Event Flow
 
 ```text
-User logs event in frontend
+Person logs anonymous event in frontend
 Frontend sends request to Go API
 Go API validates event
 Go API stores event in MongoDB
@@ -86,7 +110,8 @@ MongoDB stores:
 - model configs
 - export metadata
 
-MongoDB should run locally through Docker Compose in initial release.
+MongoDB should run locally through Docker Compose
+Helm chart / Kubernetes deployment in initial release.
 
 ## C++ Math Engine Responsibilities
 
@@ -112,7 +137,8 @@ Reasons:
 - allows independent scaling and testing
 - keeps backend and scoring failures isolated
 - preserves deterministic JSON input/output
-- fits Docker Compose local development
+- fits Docker Compose
+Helm chart / Kubernetes deployment local development
 
 The same binary may retain CLI-compatible stdin/stdout mode for smoke tests, but backend integration should use HTTP.
 
@@ -130,7 +156,15 @@ Go parses JSON response
 Go stores score snapshot
 ```
 
-## Local Development
+## Deployment Modes
+
+### Centralized Kubernetes
+
+The Helm chart should be the primary shared deployment path. It packages frontend, backend, math engine, optional LLM adapter, MongoDB, and Valkey with switches for external MongoDB and Valkey services. Platform teams can expose the UI and API through Gateway API, private ingress infrastructure, or port-forwarding during evaluation.
+
+Centralized mode should preserve anonymous application semantics: Logarift does not need a user table, event ownership field, or per-person authorization model for the initial release.
+
+### Local Development
 
 Expected local development command:
 
@@ -165,13 +199,17 @@ LOGARIFT_EXPORT_DIR
 
 ## Security Assumptions
 
-initial release is local-only.
+The initial public release is anonymous by default, even when centrally deployed.
 
 Do not expose MongoDB publicly.
 
 Do not bind services to public interfaces unless explicitly configured.
 
 Do not collect hidden telemetry.
+
+Do not add Logarift-managed user identity, event authorship, or individual productivity views.
+
+If an organization later needs SSO, prefer a minimal access gate at ingress, gateway, or identity-provider integration boundaries without storing identity on friction events.
 
 ## Failure Handling
 
@@ -197,7 +235,9 @@ Possible later additions:
 - Git importer
 - CI importer
 - plugin runner
-- local team aggregation server
+- optional SSO access gate through Entra ID, AWS IAM Identity Center, Google Cloud Identity, or generic OIDC/SAML
+- LLM/ML-assisted friction location for likely systems, teams, and organisation areas
+- anonymous aggregate team and organisation views with minimum cohort protections
 - advanced math service
 - report generator
 - backup/restore service
@@ -222,11 +262,11 @@ enrichment engine = interpretation of notes into structured fields
 math engine       = deterministic scoring from canonical structured fields
 ```
 
-Future local LLM or local ML adapters may be added behind the enrichment boundary without changing the math-engine contract.
+Future local, private-network, or centrally operated LLM/ML adapters may be added behind the enrichment boundary without changing the math-engine contract. Organisation-intelligence use cases should remain a separate future feature with explicit privacy guardrails.
 
 ## Upload flow
 
-For rich notes, the frontend may upload screenshots to the backend through `POST /api/v1/uploads`. The backend writes accepted images to `LOGARIFT_UPLOAD_DIR` and returns a local `/uploads/{filename}` URL. The notes editor inserts that URL into the event notes. No cloud object storage is used in initial release.
+For rich notes, the frontend may upload screenshots to the backend through `POST /api/v1/uploads`. The backend writes accepted images to `LOGARIFT_UPLOAD_DIR` and returns a local `/uploads/{filename}` URL. The notes editor inserts that URL into the event notes. No Logarift-managed cloud object storage is used in initial release.
 
 ## Math Engine Observability
 

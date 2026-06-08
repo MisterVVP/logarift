@@ -2,6 +2,12 @@
 
 This chart deploys the Logarift frontend, Go backend, C++ math engine, optional LLM adapter, MongoDB, and Valkey Streams.
 
+## Deployment posture
+
+This chart is the preferred shared deployment path for Logarift. It is intended for private Kubernetes clusters where a platform or DevEx team can make anonymous friction logging available to developers, technical leads, Developer Experience engineers, and engineering managers across a tech organization.
+
+The chart does not introduce Logarift-managed user accounts or per-person authorization. If an organization needs an access gate, place it at the Gateway API, ingress, identity-aware proxy, or service-mesh boundary until a future SSO feature is designed.
+
 ## Install
 
 Install from a local checkout:

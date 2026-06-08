@@ -8,26 +8,31 @@ The system should be useful for Developer Experience improvement without becomin
 
 ## Privacy Principles
 
-### Local-First by Default
+### Anonymous by Default
 
-initial release data stays local.
+Initial release events should not carry Logarift-managed user identity.
 
-No cloud account is required.
+The product should not require per-person accounts, event ownership, or authorization rules to deliver its core value.
 
-No cloud sync is included in initial release.
+Centralized private deployments are acceptable when infrastructure owners keep access controlled and the application remains anonymous by default. Local Docker Compose remains available for DevEx platform developers and contributors.
+
+No Logarift cloud account is required.
+
+No Logarift-controlled cloud sync is included in initial release.
 
 ### Explicit User Control
 
-The user should control:
+People and deployment operators should have explicit controls over:
 
-- what they log
-- what they export
-- what they delete
+- what is logged
+- what is exported
+- what is deleted
 - whether any future integrations are enabled
+- whether a centralized deployment is exposed only through approved private access paths
 
 ### No Hidden Telemetry
 
-The system must not silently collect:
+The system must not silently collect or identity-link:
 
 - IDE activity
 - keystrokes
@@ -40,34 +45,35 @@ The system must not silently collect:
 
 The product must not rank developers by productivity.
 
-Future team features must avoid individual leaderboards.
+Future team and organisation features must avoid individual leaderboards, private timelines, identity-linked histories, and manager views that identify who experienced or caused friction.
 
 ### Private Notes Stay Local
 
 Free-text notes may contain sensitive details.
 
-initial release notes stay local in MongoDB.
+Initial release notes are stored in MongoDB for the deployment.
 
-Future export and team features should treat notes as sensitive by default.
+Future export, team, and organisation-intelligence features should treat notes as sensitive by default and should not expose raw notes in manager-facing aggregate views.
 
 ### Data Deletion
 
-The user should be able to delete local data.
+Deletion should be available at the entity level in the initial release.
 
-initial release may implement deletion at the entity level.
+Future versions should include deployment-level retention controls, full local data reset for developer mode, and privacy-aware centralized reset/export workflows.
 
-Future versions should include full local data reset.
+### Future Team, Organisation, and SSO Features
 
-### Future Team Mode
+If aggregate team or organisation features are added later, they should use:
 
-If team mode is added later, it should use:
-
-- explicit opt-in
 - aggregation
-- anonymization or pseudonymization
+- anonymity-preserving design
 - minimum cohort sizes
 - no private timeline access for managers
 - no raw notes in team dashboards by default
+- no model output that identifies who reported or caused friction
+- clear confidence and uncertainty labels for LLM/ML-inferred systems, teams, or organisation areas
+
+If SSO is added later, it should be an access gate through providers such as Microsoft Entra ID, AWS IAM Identity Center, Google Cloud Identity, or generic OIDC/SAML. SSO should not require Logarift to attach identity to friction events, scores, or dashboards.
 
 ## IP Principles
 

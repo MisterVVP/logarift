@@ -8,7 +8,7 @@ Common examples include slow feedback loops, unclear ownership, unstable develop
 
 Most teams already experience these problems, but they usually measure them indirectly through delivery metrics, surveys, retrospectives, or anecdotal complaints. These approaches are useful, but they often miss the moment-by-moment structure of friction and how small frictions compound over time.
 
-Logarift is a local-first system for recording, analyzing, and explaining Developer Experience friction.
+Logarift is an anonymous, centrally deployable system for recording, analyzing, and explaining Developer Experience friction across a tech organization. It can still run locally for DevEx platform developers, contributors, and demos, but the product concept is an organization-available service rather than a personal tracker.
 
 The central idea is:
 
@@ -21,13 +21,13 @@ Friction is a compounding signal that affects cognitive load, flow stability, an
 
 Primary users:
 
-- individual software developers
+- software developers across a tech organization
 - platform engineers
 - Developer Experience engineers
 - technical leads
 - engineering managers
 - internal tools teams
-- small engineering teams improving their own workflows
+- DevEx platform developers operating the service
 
 Secondary users:
 
@@ -57,7 +57,7 @@ The system should combine:
 
 - manual developer logging
 - structured event metadata
-- local analytics
+- anonymous shared analytics
 - mathematical scoring
 - time-dependent friction modeling
 - explainable dashboards
@@ -68,9 +68,9 @@ Logarift should not be a generic productivity tracker.
 
 The differentiating ideas are:
 
-1. **Local-first trust model**
+1. **Anonymous organization trust model**
 
-   The user owns the data. initial release data stays local.
+   The service should be available to the whole tech organization without requiring Logarift-managed user accounts. Friction logs are anonymous by default, and deployment owners should minimize access barriers while keeping infrastructure private.
 
 2. **Friction as a dynamic signal**
 
@@ -92,21 +92,24 @@ The differentiating ideas are:
 
    The system must not rank individual developers or silently collect behavioral data.
 
-## Local-First Principle
+## Deployment Principle
 
-The initial release runs locally with:
+The default product posture is centralized private deployment for a tech organization:
 
+- containers for each runtime component
+- Kubernetes/Helm for shared installations
 - Go backend API
 - React + Vite frontend
 - MongoDB
 - C++ math engine
-- Docker Compose
+- Valkey-backed asynchronous enrichment when enabled
+- optional LLM adapter
 
-No cloud account is required.
+Local Docker Compose remains a supported path for DevEx platform developers, contributors, demos, and safe offline testing. No Logarift cloud account is required.
 
 ## Non-Surveillance Principle
 
-Logarift is designed for self-reflection and workflow improvement.
+Logarift is designed for anonymous friction reporting, self-reflection, and workflow improvement.
 
 It must not become:
 
@@ -114,18 +117,19 @@ It must not become:
 - an individual productivity ranking tool
 - hidden telemetry
 - a manager dashboard for inspecting private developer timelines
+- a tool for identifying who caused or experienced friction
 
-Future team features should use aggregation, anonymization or pseudonymization, minimum cohort sizes, and explicit opt-in.
+Future team and organisation features should use aggregation, anonymity-preserving design, minimum cohort sizes, and clear labeling that results are decision-support signals rather than performance evidence.
 
-## initial release Vision
+## Initial Public Release Vision
 
-The initial release should allow a single local user to:
+The initial public release should allow anonymous users of a centrally deployed instance, and local DevEx platform developers running Docker Compose, to:
 
 - create friction events
 - classify events using the original ontology
 - link events to work sessions and goals
 - compute basic friction scores
-- view a local dashboard
+- view an anonymous shared dashboard
 - export data as JSON
 
 ## Long-Term Vision
@@ -134,7 +138,9 @@ Future versions may support:
 
 - local Git and CI importers
 - intervention simulation
-- team-level aggregate analysis
+- team-level aggregate analysis with minimum cohort protections
+- LLM/ML-assisted friction location that suggests likely affected systems, teams, or organisation areas from anonymous logs
+- optional SSO gate for deployment access using Entra ID, AWS IAM Identity Center, Google Cloud Identity, or generic OIDC/SAML without introducing per-person productivity views
 - advanced mathematical models
 - plugin-based data ingestion
 - IDE integrations

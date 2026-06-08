@@ -196,30 +196,30 @@ The old full endpoint remains available for advanced/manual correction workflows
 POST /api/v1/friction-events
 ```
 
-## Future Local LLM Adapter
+## Future LLM Adapter
 
-A future optional adapter may use a local LLM to improve ontology extraction.
+A future optional adapter may use a local, private-network, or centrally operated LLM to improve ontology extraction. Organisation-intelligence use cases such as locating likely affected systems, teams, or organisation areas are separate future features and must preserve anonymity.
 
 Design constraints:
 
 - disabled by default
-- local-only
+- private by default
 - no hidden telemetry
-- no cloud LLM requirement
+- no hosted LLM requirement for the initial product path
 - structured JSON output only
 - deterministic settings where possible
 - fallback to deterministic rules when output is invalid
 - confidence and explanation required for every inferred field
 
-Possible local-first runtime options include tools such as Ollama or other local model runtimes, but this initial release iteration does not implement them.
+Possible runtime options include tools such as Ollama or other private model runtimes, but this initial release iteration does not implement additional organization-intelligence behavior.
 
-## Future Local ML Classifier
+## Future ML Classifier
 
-A later local ML classifier may learn from user corrections.
+A later ML classifier may learn from explicit corrections without creating a stable person identifier.
 
 Design constraints:
 
-- trained on local data only unless user explicitly exports data
+- trained on deployment-local data only unless a deployment operator explicitly exports data under a documented privacy process
 - optional
 - explainable enough for correction workflows
 - versioned model metadata
