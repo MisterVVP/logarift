@@ -1,4 +1,4 @@
-{{- if .Values.llmAdapter.enabled }}
+{{- if and .Values.llmAdapter.enabled .Values.llmAdapter.deploy }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -26,6 +26,10 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: {{ include "logarift.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
       containers:

@@ -6,6 +6,9 @@ fullnameOverride: ""
 # imagePullSecrets -- Optional image pull secrets for private registries.
 imagePullSecrets: []
 
+# clusterDomain -- Kubernetes cluster DNS domain used for default in-cluster service URLs.
+clusterDomain: cluster.local
+
 serviceAccount:
   # serviceAccount.create -- Create a dedicated service account.
   create: true
@@ -78,7 +81,7 @@ frontend:
   service:
     type: ClusterIP
     port: 5173
-  # frontend.apiBaseURL -- Browser-facing API base URL. Empty uses same origin, useful behind one ingress host.
+  # frontend.apiBaseURL -- Browser-facing API base URL. Empty uses same origin, useful behind one Gateway API host.
   apiBaseURL: ""
   env: {}
   extraEnv: []
@@ -135,7 +138,10 @@ mathEngine:
     periodSeconds: 10
 
 llmAdapter:
+  # llmAdapter.enabled -- Enable backend LLM enrichment integration.
   enabled: false
+  # llmAdapter.deploy -- Deploy the adapter in this release. Set false with backendURL for an existing in-cluster adapter service.
+  deploy: true
   replicaCount: 1
   image:
     repository: ghcr.io/mistervvp/logarift-llm-adapter
@@ -145,6 +151,9 @@ llmAdapter:
   service:
     type: ClusterIP
     port: 8091
+  # backendURL -- Backend-facing adapter URL. Empty uses the chart-managed Service DNS name in the release namespace.
+  backendURL: ""
+  # ollamaURL -- Adapter-facing Ollama-compatible runtime URL. Use a Service DNS name for an in-cluster runtime.
   ollamaURL: http://ollama:11434
   model: qwen3:8b
   timeoutMS: 15000
@@ -213,23 +222,50 @@ valkey:
   affinity: {}
   topologySpreadConstraints: []
 
-ingress:
+gateway:
+  # gateway.enabled -- Expose Logarift with Gateway API resources instead of legacy Ingress.
   enabled: false
+  # gateway.create -- Create a Gateway in this release. Set false to attach the HTTPRoute to an existing Gateway.
+  create: false
+  # gateway.name -- Existing or chart-managed Gateway name. Empty defaults to the release fullname when gateway.create=true.
+  name: ""
+  # gateway.namespace -- Optional Gateway namespace for cross-namespace HTTPRoute attachment. Empty uses the release namespace.
+  namespace: ""
+  # gateway.className -- GatewayClass name. Required when gateway.create=true.
   className: ""
   annotations: {}
-  hosts:
-    - host: logarift.local
-      paths:
-        - path: /
-          pathType: Prefix
-          service: frontend
-        - path: /api
-          pathType: Prefix
-          service: backend
-        - path: /health
-          pathType: Prefix
-          service: backend
-        - path: /uploads
-          pathType: Prefix
-          service: backend
-  tls: []
+  labels: {}
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: logarift.local
+
+httpRoute:
+  annotations: {}
+  labels: {}
+  # httpRoute.parentRefs -- Explicit Gateway parentRefs. Defaults to gateway.name or the release fullname.
+  parentRefs: []
+  hostnames:
+    - logarift.local
+  rules:
+    - service: backend
+      matches:
+        - path:
+            type: PathPrefix
+            value: /api
+    - service: backend
+      matches:
+        - path:
+            type: PathPrefix
+            value: /health
+    - service: backend
+      matches:
+        - path:
+            type: PathPrefix
+            value: /uploads
+    - service: frontend
+      matches:
+        - path:
+            type: PathPrefix
+            value: /

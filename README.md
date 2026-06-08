@@ -139,7 +139,7 @@ helm upgrade --install logarift charts/logarift \
   --set valkey.external.url='redis://valkey.example:6379'
 ```
 
-Most Kubernetes placement controls are optional and configurable per component, including `nodeSelector`, `affinity`, pod anti-affinity through `affinity`, `tolerations`, and `topologySpreadConstraints`. The chart also supports existing Secrets for MongoDB and Valkey connection strings, persistence settings, probes, resources, ingress, and optional LLM adapter deployment.
+Most Kubernetes placement controls are optional and configurable per component, including `nodeSelector`, `affinity`, pod anti-affinity through `affinity`, `tolerations`, and `topologySpreadConstraints`. The chart also supports existing Secrets for MongoDB and Valkey connection strings, persistence settings, probes, resources, Gateway API HTTPRoutes, and optional LLM adapter deployment.
 
 Install a published chart from GHCR by version:
 

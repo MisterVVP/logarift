@@ -1,3 +1,4 @@
+{{- $defaultLLMAdapterURL := printf "http://%s-llm-adapter.%s.svc.%s:%v" (include "logarift.fullname" .) .Release.Namespace .Values.clusterDomain .Values.llmAdapter.service.port -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -12,7 +13,7 @@ data:
   LOGARIFT_EXPORT_DIR: "/var/lib/logarift/exports"
   LOGARIFT_UPLOAD_DIR: "/var/lib/logarift/uploads"
   LOGARIFT_LLM_ADAPTER_ENABLED: {{ .Values.llmAdapter.enabled | quote }}
-  LOGARIFT_LLM_ADAPTER_URL: "http://{{ include "logarift.fullname" . }}-llm-adapter:{{ .Values.llmAdapter.service.port }}"
+  LOGARIFT_LLM_ADAPTER_URL: {{ default $defaultLLMAdapterURL .Values.llmAdapter.backendURL | quote }}
   LOGARIFT_LLM_ADAPTER_TIMEOUT_MS: {{ .Values.llmAdapter.timeoutMS | quote }}
   LOGARIFT_LLM_ADAPTER_MIN_CONFIDENCE: {{ .Values.llmAdapter.minConfidence | quote }}
   LOGARIFT_LLM_ADAPTER_PROMPT_PRIVACY_MODE: {{ .Values.llmAdapter.promptPrivacyMode | quote }}
@@ -22,5 +23,8 @@ data:
   LOGARIFT_VALKEY_GROUP: {{ .Values.valkey.group | quote }}
   LOGARIFT_VALKEY_CONSUMER: {{ .Values.valkey.consumer | quote }}
   VITE_LOGARIFT_API_BASE_URL: {{ .Values.frontend.apiBaseURL | quote }}
-  LOGARIFT_LLM_ADAPTER_OLLAMA_URL: {{ .Values.llmAdapter.ollamaURL | quote }}
-  LOGARIFT_LLM_ADAPTER_MODEL: {{ .Values.llmAdapter.model | quote }}
+  LOGARIFT_LLM_ADAPTER_HOST: "0.0.0.0"
+  LOGARIFT_LLM_ADAPTER_PORT: {{ .Values.llmAdapter.service.port | quote }}
+  LOGARIFT_LLM_RUNTIME_URL: {{ .Values.llmAdapter.ollamaURL | quote }}
+  LOGARIFT_LLM_MODEL: {{ .Values.llmAdapter.model | quote }}
+  LOGARIFT_LLM_REQUEST_TIMEOUT_MS: {{ .Values.llmAdapter.timeoutMS | quote }}

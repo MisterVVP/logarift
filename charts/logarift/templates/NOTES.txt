@@ -4,11 +4,15 @@ Frontend service:
   {{ include "logarift.fullname" . }}-frontend:{{ .Values.frontend.service.port }}
 Backend service:
   {{ include "logarift.fullname" . }}-backend:{{ .Values.backend.service.port }}
+{{- if and .Values.llmAdapter.enabled .Values.llmAdapter.deploy }}
+LLM adapter service:
+  {{ include "logarift.fullname" . }}-llm-adapter:{{ .Values.llmAdapter.service.port }}
+{{- end }}
 
-{{- if .Values.ingress.enabled }}
-Ingress hosts:
-{{- range .Values.ingress.hosts }}
-  - {{ .host }}
+{{- if .Values.gateway.enabled }}
+Gateway API HTTPRoute hosts:
+{{- range .Values.httpRoute.hostnames }}
+  - {{ . }}
 {{- end }}
 {{- else }}
 Port-forward the frontend locally:

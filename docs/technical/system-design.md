@@ -235,7 +235,7 @@ The Helm chart in `charts/logarift` packages the same runtime boundaries used by
 
 ```mermaid
 flowchart LR
-  Ingress[Ingress or port-forward]
+  Gateway[Gateway API HTTPRoute or port-forward]
   UI[Frontend service]
   API[Backend service]
   Math[Math-engine service]
@@ -243,8 +243,8 @@ flowchart LR
   Valkey[(Valkey StatefulSet or external Valkey/Redis)]
   LLM[Optional LLM adapter]
 
-  Ingress --> UI
-  Ingress --> API
+  Gateway --> UI
+  Gateway --> API
   UI --> API
   API --> Math
   API --> Mongo

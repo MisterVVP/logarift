@@ -1,6 +1,12 @@
+{{- if hasKey .Values "ingress" -}}
+{{- fail "ingress values are no longer supported; use gateway and httpRoute values with Gateway API instead" -}}
+{{- end -}}
 {{- if and (not .Values.mongodb.enabled) (eq .Values.mongodb.external.uri "") (eq .Values.mongodb.external.existingSecret "") -}}
 {{- fail "mongodb.enabled=false requires mongodb.external.uri or mongodb.external.existingSecret" -}}
 {{- end -}}
 {{- if and .Values.llmAdapter.enabled (not .Values.valkey.enabled) (eq .Values.valkey.external.url "") (eq .Values.valkey.external.existingSecret "") -}}
 {{- fail "llmAdapter.enabled=true with valkey.enabled=false requires valkey.external.url or valkey.external.existingSecret, or async jobs will not be delivered" -}}
+{{- end -}}
+{{- if and .Values.llmAdapter.enabled (not .Values.llmAdapter.deploy) (eq .Values.llmAdapter.backendURL "") -}}
+{{- fail "llmAdapter.enabled=true with llmAdapter.deploy=false requires llmAdapter.backendURL for an existing adapter Service" -}}
 {{- end -}}
