@@ -1,6 +1,6 @@
 # Logarift
 
-Logarift is a local-first Developer Experience friction logging system that records, scores, and analyzes interruptions, cognitive drag, workflow rifts, and recurring sources of engineering toil.
+Logarift is an anonymous Developer Experience friction logging system for centrally deployed tech-organization use. It records, scores, and analyzes interruptions, cognitive drag, workflow rifts, and recurring sources of engineering toil without building a surveillance or individual productivity tracking tool.
 
 The core idea:
 
@@ -21,20 +21,29 @@ Friction is a compounding signal that affects cognitive load, flow stability, an
 - rich notes editor with formatted text, links, pasted screenshots, and local image uploads
 - dashboard cards and breakdowns with tooltips
 - structured math-engine calculation logs
-- Docker Compose local stack
+- Docker Compose local stack for DevEx platform developers and contributors
+- Helm chart for centralized Kubernetes deployment across a tech organization
 - optional local LLM adapter service for quick-event enrichment behind deterministic fallback
 
 The LLM adapter is disabled unless `LOGARIFT_LLM_ADAPTER_ENABLED=true`; see `docs/technical/04_local_llm_adapter_setup.md` for Ollama/Qwen setup and optional Logarift-specific Modelfiles.
 
 Out of scope remains:
 
-- authentication
-- cloud sync
-- team dashboards
+- per-developer accounts or authorization models
+- SSO enforcement such as Entra ID, AWS IAM Identity Center, Google Cloud Identity, or generic OIDC/SAML
+- cloud sync controlled by the application
+- team dashboards that reveal private timelines or individual rankings
 - hidden telemetry
 - IDE/chat/calendar ingestion
 - individual productivity ranking
 - AI recommendations
+- LLM/ML organisation and team inference for locating systemic friction
+
+## Deployment Model
+
+Logarift is now positioned around a centralized private deployment model: run it as containers or install it into Kubernetes so every developer, technical lead, Developer Experience engineer, and engineering manager in a tech organization can log and inspect friction with minimal access barriers. The application should stay anonymous by default: no Logarift-owned user concept, no per-person authorization rules, and no individual productivity views.
+
+Local Docker Compose remains important, but primarily for DevEx platform developers, contributors, demos, and safe testing before cluster rollout.
 
 ## Repository Layout
 

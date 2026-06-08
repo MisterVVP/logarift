@@ -4,7 +4,7 @@
 
 This living document describes how Logarift components integrate at runtime. It replaces the one-off asynchronous LLM enrichment design note and should be updated whenever component boundaries, data contracts, or integration mechanisms change.
 
-Logarift remains local-first: the UI, backend API, MongoDB, math engine, LLM adapter, model runtime, logs, traces, and tests run locally by default.
+Logarift is designed for centralized private deployment with anonymous application semantics: the UI, backend API, MongoDB, math engine, optional LLM adapter, logs, traces, and tests can run in Kubernetes for organization-wide access or locally through Docker Compose for DevEx platform developers and contributors.
 
 ## Component map
 
@@ -231,7 +231,7 @@ Production-like local runs should leave `LOGARIFT_LLM_MOCK_RESPONSE_ENABLED=fals
 
 ## Kubernetes deployment model
 
-The Helm chart in `charts/logarift` packages the same runtime boundaries used by Docker Compose:
+Kubernetes is the primary shared deployment model for a tech organization. The Helm chart in `charts/logarift` packages the same runtime boundaries used by Docker Compose so platform developers can test locally and then promote the same architecture into a private cluster:
 
 ```mermaid
 flowchart LR
@@ -253,3 +253,5 @@ flowchart LR
 ```
 
 MongoDB and Valkey are controlled by independent boolean flags. When `mongodb.enabled=false` or `valkey.enabled=false`, operators can provide direct connection strings or existing Secret references. Each workload accepts optional scheduling controls (`nodeSelector`, `affinity`, `tolerations`, and `topologySpreadConstraints`) so production clusters can add anti-affinity and taint handling without forcing those settings on local installs.
+
+The application does not require a Logarift user table, event authorship field, or per-person authorization model. If a deployment needs private entry control in a future release, prefer an SSO or gateway access gate that does not attach identity to friction events, scores, or dashboards.

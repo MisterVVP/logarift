@@ -2,7 +2,7 @@
 
 ## Overview
 
-Logarift is a local-first Developer Experience friction logging and analysis system.
+Logarift is an anonymous Developer Experience friction logging and analysis system designed for centralized private deployment across a tech organization, with local Docker Compose kept for DevEx platform developers, contributors, and demos.
 
 The project is based on a simple idea:
 
@@ -13,7 +13,7 @@ Friction is a compounding signal that affects cognitive load, flow stability, an
 
 The documentation in this folder is split into:
 
-- `product/` for product foundations, initial release boundaries, ontology, data model, local-first principles, and privacy/IP governance.
+- `product/` for product foundations, initial release boundaries, ontology, data model, centralized/local deployment principles, future organisation intelligence, and privacy/IP governance.
 - `technical/` for implementation architecture decisions and backend/frontend/persistence/math-engine technical notes.
 
 initial planning baseline is intentionally documentation-only. It should guide later implementation tasks for the Go backend, React + Vite frontend, MongoDB persistence layer, and C++ math engine.
@@ -28,7 +28,7 @@ Read the product documents in this order, then consult technical documents when 
 
 [product/00_product_vision.md](./product/00_product_vision.md)
 
-Defines the product direction, target users, core idea, differentiation, local-first principle, and long-term vision.
+Defines the product direction, target users, core idea, differentiation, anonymous centralized deployment principle, and long-term vision.
 
 Start here to understand what Logarift is and what it should avoid becoming.
 
@@ -68,9 +68,9 @@ Use this document when implementing event models, validation, UI dropdowns, and 
 
 Defines what is included and excluded from the initial release.
 
-The initial release includes local single-user mode, manual friction logging, goals, sessions, MongoDB persistence, basic dashboarding, C++ scoring service integration, JSON export, and seed/demo data.
+The initial release includes centralized anonymous mode, local developer mode, manual friction logging, goals, sessions, MongoDB persistence, basic dashboarding, C++ scoring service integration, JSON export, and seed/demo data.
 
-The initial release excludes cloud deployment, authentication, team dashboards, IDE plugins, external importers, hidden telemetry, advanced research models, and AI-generated recommendations.
+The initial release excludes Logarift-managed user accounts, per-person authorization, SSO enforcement, team dashboards that expose individual timelines, IDE plugins, external importers, hidden telemetry, advanced research models, and AI-generated recommendations.
 
 #### 5. Math Model
 
@@ -106,13 +106,13 @@ exports
 
 Use this document when implementing repositories, indexes, validation, seed data, and API payload mapping.
 
-#### 7. Local-First Architecture
+#### 7. Centralized and Local Architecture
 
 [product/06_local_first_architecture.md](./product/06_local_first_architecture.md)
 
-Defines the high-level initial release architecture.
+Defines the high-level initial release architecture for centralized Kubernetes and local developer modes.
 
-initial release components:
+Initial release components:
 
 ```text
 React + Vite frontend
@@ -120,9 +120,10 @@ Go backend API
 MongoDB
 C++ math engine service
 Docker Compose
+Helm chart / Kubernetes deployment
 ```
 
-This document explains the local architecture and the explicit HTTP boundary between the Go backend and the separate C++ math engine service.
+This document explains the centralized and local architecture plus the explicit HTTP boundary between the Go backend and the separate C++ math engine service.
 
 #### 8. Privacy and IP Governance
 
@@ -132,11 +133,12 @@ Defines privacy and intellectual property principles.
 
 Important principles:
 
-- local-first by default
+- anonymous by default
+- centralized private deployment with local developer mode
 - no hidden telemetry
 - no individual productivity ranking
 - no employee surveillance
-- private notes stay local
+- private notes stay in the deployment-local MongoDB and remain sensitive
 - original ontology, schemas, formulas, UI, docs, and implementation belong to the project
 - public scientific research may inform the system, but proprietary company work must not be copied
 
@@ -145,6 +147,12 @@ Important principles:
 [product/08_quick_logging_and_enrichment.md](./product/08_quick_logging_and_enrichment.md)
 
 Defines the new three-field logging UX, color-coded friction levels, observed/inferred/canonical event model, deterministic rule engine, and future local LLM/ML extension points.
+
+#### 10. Future Organisation Intelligence and Identity
+
+[product/09_future_org_intelligence_and_identity.md](./product/09_future_org_intelligence_and_identity.md)
+
+Captures future LLM/ML-assisted friction location, team and organisation inference, and optional SSO access gates. These features are explicitly outside the initial release and must preserve anonymity, minimum cohort protections, and non-surveillance constraints.
 
 ### Technical documents
 
@@ -202,15 +210,15 @@ Documents GHCR Docker image publishing, Helm OCI chart publishing, GitHub Releas
 Implementation work should preserve these constraints:
 
 - MongoDB is the initial release persistence backend.
-- The system is local-first.
-- The initial release is single-user.
-- The initial release does not include authentication.
-- The initial release does not include cloud sync.
+- The system is anonymous by default.
+- The initial release supports centralized private deployment and local developer mode.
+- The initial release does not include Logarift-managed user accounts, per-person authorization, or SSO enforcement.
+- The initial release does not include Logarift cloud sync.
 - The initial release does not include hidden telemetry.
-- The initial release does not rank developers.
+- The initial release does not rank developers or identify who reported or caused friction.
 - The initial release math is deterministic and explainable.
 - The default logging UI uses three fields and relies on local deterministic enrichment for structured fields.
-- The initial release C++ math engine is a separate service in Docker Compose and remains CLI-compatible for local deterministic tests.
+- The initial release C++ math engine is a separate service in Docker Compose and Kubernetes and remains CLI-compatible for local deterministic tests.
 - Proprietary company taxonomies, survey wording, dashboards, and scoring systems must not be copied.
 
 ## Contribution Notes

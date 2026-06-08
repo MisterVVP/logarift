@@ -147,7 +147,7 @@ created_at
 
 ## Collection: work_goals
 
-Stores user-defined work goals.
+Stores manually defined work goals. The collection does not require event authorship or a Logarift-managed user identity.
 
 Example:
 
@@ -322,9 +322,9 @@ Rules:
 
 ## Data Retention
 
-initial release keeps data until the user deletes it.
+Initial release keeps data until an event is deleted or a deployment operator applies a retention process.
 
-Future versions may include local retention settings.
+Future versions may include local developer reset controls and centralized retention settings.
 
 ## Quick Logging Extension
 
@@ -391,4 +391,4 @@ The canonical values are also copied to the existing top-level fields such as `w
 
 ## Local Uploaded Images
 
-Screenshots and other rich-note images are stored as local files under `LOGARIFT_UPLOAD_DIR` and served through `/uploads/{filename}`. Event notes store image URLs instead of embedding binary image bytes in MongoDB. This keeps `friction_events` documents small while preserving local-first behavior.
+Screenshots and other rich-note images are stored as local files under `LOGARIFT_UPLOAD_DIR` and served through `/uploads/{filename}`. Event notes store image URLs instead of embedding binary image bytes in MongoDB. This keeps `friction_events` documents small while preserving deployment-local storage behavior.
