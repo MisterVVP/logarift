@@ -1,0 +1,73 @@
+{{- if .Values.llmAdapter.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "logarift.fullname" . }}-llm-adapter
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: llm-adapter
+spec:
+  replicas: {{ .Values.llmAdapter.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "logarift.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: llm-adapter
+  template:
+    metadata:
+      labels:
+        {{- include "logarift.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: llm-adapter
+        {{- with .Values.llmAdapter.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.llmAdapter.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "logarift.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: llm-adapter
+          image: {{ include "logarift.image" (dict "root" . "image" .Values.llmAdapter.image) }}
+          imagePullPolicy: {{ .Values.llmAdapter.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: 8091
+          envFrom:
+            - configMapRef:
+                name: {{ include "logarift.fullname" . }}-config
+          env:
+            {{- range $name, $value := .Values.llmAdapter.env }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- with .Values.llmAdapter.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          {{- with .Values.llmAdapter.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- include "logarift.podScheduling" .Values.llmAdapter | nindent 6 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "logarift.fullname" . }}-llm-adapter
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: llm-adapter
+spec:
+  type: {{ .Values.llmAdapter.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.llmAdapter.service.port }}
+      targetPort: http
+  selector:
+    {{- include "logarift.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: llm-adapter
+{{- end }}

@@ -29,7 +29,7 @@ flowchart LR
   Worker -->|HTTP JSON + trace context| Adapter
   Adapter -->|/api/chat| Runtime
   Worker -->|validated merge update| DB
-  UI -->|poll event/job status| API
+  UI -->|SSE job updates + HTTP JSON| API
 ```
 
 ## Quick logging and asynchronous LLM enrichment
@@ -67,8 +67,10 @@ sequenceDiagram
   Worker->>Worker: Validate ontology values and confidence gates
   Worker->>DB: Update event inference/canonical/enrichment merge summary
   Worker->>DB: Complete job
-  UI->>API: GET /api/v1/friction-events/{id} or /api/v1/enrichment-jobs/{job_id}
-  API-->>UI: Updated enrichment status and merge decisions
+  UI->>API: GET /api/v1/enrichment-jobs/{job_id}/events
+  API-->>UI: SSE enrichment events until terminal status
+  UI->>API: GET /api/v1/friction-events/{id}
+  API-->>UI: Updated event fields and merge decisions
 ```
 
 ## Runtime contracts
@@ -92,9 +94,9 @@ sequenceDiagram
 
 When the adapter is disabled, `llm_status` is `disabled` and deterministic fields are final. When enqueue fails after event persistence, `llm_status` is `not_queued` and the event remains saved.
 
-### Job status endpoint
+### Job status endpoints
 
-`GET /api/v1/enrichment-jobs/{id}` returns the durable LLM job document. The UI can poll this endpoint or the event endpoint. Supported status values are:
+`GET /api/v1/enrichment-jobs/{id}` returns the durable LLM job document. `GET /api/v1/enrichment-jobs/{id}/events` streams Server-Sent Events with the latest job and merge summary so the browser receives backend progress without fixed-interval polling. The UI falls back to HTTP polling when EventSource is unavailable. Supported status values are:
 
 ```text
 not_requested
@@ -226,3 +228,28 @@ LOGARIFT_LLM_MOCK_RESPONSE_ENABLED=true
 ```
 
 Production-like local runs should leave `LOGARIFT_LLM_MOCK_RESPONSE_ENABLED=false` and point the adapter at an Ollama-compatible runtime. If the adapter logs `normalized_field_count=0`, first inspect the `warnings` value and merge summary; this usually indicates prompt/response-shape conservatism or rejected schema output, not necessarily that the model is too small. The prompt and Modelfiles instruct local models to confirm safe deterministic baselines for simple notes before returning an empty `fields` object.
+
+## Kubernetes deployment model
+
+The Helm chart in `charts/logarift` packages the same runtime boundaries used by Docker Compose:
+
+```mermaid
+flowchart LR
+  Ingress[Ingress or port-forward]
+  UI[Frontend service]
+  API[Backend service]
+  Math[Math-engine service]
+  Mongo[(MongoDB StatefulSet or external MongoDB)]
+  Valkey[(Valkey StatefulSet or external Valkey/Redis)]
+  LLM[Optional LLM adapter]
+
+  Ingress --> UI
+  Ingress --> API
+  UI --> API
+  API --> Math
+  API --> Mongo
+  API --> Valkey
+  API --> LLM
+```
+
+MongoDB and Valkey are controlled by independent boolean flags. When `mongodb.enabled=false` or `valkey.enabled=false`, operators can provide direct connection strings or existing Secret references. Each workload accepts optional scheduling controls (`nodeSelector`, `affinity`, `tolerations`, and `topologySpreadConstraints`) so production clusters can add anti-affinity and taint handling without forcing those settings on local installs.

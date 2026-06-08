@@ -25,7 +25,7 @@ The adapter should:
 
 The adapter must not:
 
-- call hosted LLM APIs in MVP local mode
+- call hosted LLM APIs in initial release local mode
 - generate productivity recommendations or behavioral coaching
 - score developer performance
 - modify the C++ math formulas
@@ -154,7 +154,7 @@ The backend should continue to:
 7. persist accepted and rejected model suggestions as MongoDB inference metadata
 8. store the final observed/inference/canonical shape
 
-The adapter should not expose a user-facing browser API in MVP. Browser traffic continues to go through the Go backend.
+The adapter should not expose a user-facing browser API in initial release. Browser traffic continues to go through the Go backend.
 
 ## Request contract
 

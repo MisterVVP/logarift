@@ -2,7 +2,7 @@ package ontology
 
 import "testing"
 
-func TestMVP3OntologyMembership(t *testing.T) {
+func TestOntologyMembership(t *testing.T) {
 	if !IsWorkflowStage("test") || IsWorkflowStage("qa") {
 		t.Fatalf("workflow stage validation mismatch")
 	}

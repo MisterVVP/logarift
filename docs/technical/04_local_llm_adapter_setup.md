@@ -60,7 +60,7 @@ If `qwen3.6` is too large, use `qwen3:8b`. To pin a larger Qwen3.6 size, use `qw
 
 ## Optional Logarift Ollama Modelfiles
 
-The repository includes project-specific Ollama Modelfiles under `llm-adapter/modelfiles/`. They are tailored to the adapter response contract (`fields` plus `warnings`) instead of the generic suggestion fields. This keeps the local model aligned with Logarift's ontology, confidence gates, and MVP non-goals.
+The repository includes project-specific Ollama Modelfiles under `llm-adapter/modelfiles/`. They are tailored to the adapter response contract (`fields` plus `warnings`) instead of the generic suggestion fields. This keeps the local model aligned with Logarift's ontology, confidence gates, and initial release non-goals.
 
 Create the lower-resource alias:
 

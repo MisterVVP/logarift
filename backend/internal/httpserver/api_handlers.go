@@ -1,6 +1,8 @@
 package httpserver
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -25,6 +27,7 @@ func (s *Server) registerAPIRoutes() {
 		s.router.HandleFunc("GET /api/v1/friction-events", s.listFrictionEvents)
 		s.router.HandleFunc("GET /api/v1/friction-events/{id}", s.getFrictionEvent)
 		s.router.HandleFunc("GET /api/v1/enrichment-jobs/{id}", s.getLLMEnrichmentJob)
+		s.router.HandleFunc("GET /api/v1/enrichment-jobs/{id}/events", s.streamLLMEnrichmentJob)
 		s.router.HandleFunc("PUT /api/v1/friction-events/{id}", s.updateFrictionEvent)
 		s.router.HandleFunc("DELETE /api/v1/friction-events/{id}", s.deleteFrictionEvent)
 	}
@@ -117,6 +120,76 @@ func (s *Server) getLLMEnrichmentJob(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"job": job, "merge_summary": job.MergeSummary})
+}
+
+func (s *Server) streamLLMEnrichmentJob(w http.ResponseWriter, r *http.Request) {
+	flusher, ok := w.(http.Flusher)
+	if !ok {
+		writeServiceError(w, fmt.Errorf("streaming is not supported by this response writer"))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/event-stream")
+	w.Header().Set("Cache-Control", "no-cache, no-transform")
+	w.Header().Set("Connection", "keep-alive")
+	w.Header().Set("X-Accel-Buffering", "no")
+
+	jobID := r.PathValue("id")
+	ticker := time.NewTicker(750 * time.Millisecond)
+	defer ticker.Stop()
+
+	writeSnapshot := func() (string, error) {
+		job, err := s.api.friction.GetLLMEnrichmentJob(r.Context(), jobID)
+		if err != nil {
+			return "", err
+		}
+		payload := map[string]any{"job": job, "merge_summary": job.MergeSummary}
+		data, err := json.Marshal(payload)
+		if err != nil {
+			return "", fmt.Errorf("failed to encode stream event")
+		}
+		fmt.Fprintf(w, "event: enrichment\n")
+		fmt.Fprintf(w, "id: %s:%s\n", job.ID.Hex(), job.Status)
+		fmt.Fprintf(w, "data: %s\n\n", data)
+		flusher.Flush()
+		return job.Status, nil
+	}
+
+	status, err := writeSnapshot()
+	if err != nil {
+		writeServiceError(w, err)
+		return
+	}
+	if isTerminalLLMStatus(status) {
+		return
+	}
+
+	for {
+		select {
+		case <-r.Context().Done():
+			return
+		case <-ticker.C:
+			status, err := writeSnapshot()
+			if err != nil {
+				fmt.Fprintf(w, "event: error\n")
+				fmt.Fprintf(w, "data: %q\n\n", err.Error())
+				flusher.Flush()
+				return
+			}
+			if isTerminalLLMStatus(status) {
+				return
+			}
+		}
+	}
+}
+
+func isTerminalLLMStatus(status string) bool {
+	switch status {
+	case "succeeded", "partially_succeeded", "failed", "timed_out", "cancelled", "disabled", "not_queued":
+		return true
+	default:
+		return false
+	}
 }
 
 func (s *Server) updateFrictionEvent(w http.ResponseWriter, r *http.Request) {

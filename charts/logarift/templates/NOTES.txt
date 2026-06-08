@@ -1,0 +1,16 @@
+Logarift has been installed.
+
+Frontend service:
+  {{ include "logarift.fullname" . }}-frontend:{{ .Values.frontend.service.port }}
+Backend service:
+  {{ include "logarift.fullname" . }}-backend:{{ .Values.backend.service.port }}
+
+{{- if .Values.ingress.enabled }}
+Ingress hosts:
+{{- range .Values.ingress.hosts }}
+  - {{ .host }}
+{{- end }}
+{{- else }}
+Port-forward the frontend locally:
+  kubectl port-forward svc/{{ include "logarift.fullname" . }}-frontend 5173:{{ .Values.frontend.service.port }}
+{{- end }}

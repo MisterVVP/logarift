@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "mongodb": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "external": {
+          "type": "object",
+          "properties": {
+            "uri": {"type": "string"},
+            "existingSecret": {"type": "string"},
+            "existingSecretKey": {"type": "string"}
+          }
+        }
+      }
+    },
+    "valkey": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "external": {
+          "type": "object",
+          "properties": {
+            "url": {"type": "string"},
+            "existingSecret": {"type": "string"},
+            "existingSecretKey": {"type": "string"}
+          }
+        }
+      }
+    },
+    "llmAdapter": {
+      "type": "object",
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "promptPrivacyMode": {"enum": ["text_only", "markdown"]}
+      }
+    }
+  }
+}

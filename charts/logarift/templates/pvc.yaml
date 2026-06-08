@@ -1,0 +1,35 @@
+{{- if .Values.backend.persistence.uploads.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "logarift.fullname" . }}-uploads
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  accessModes: {{ toYaml .Values.backend.persistence.uploads.accessModes | nindent 4 }}
+  {{- with .Values.backend.persistence.uploads.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.persistence.uploads.size | quote }}
+---
+{{- end }}
+{{- if .Values.backend.persistence.exports.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "logarift.fullname" . }}-exports
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: backend
+spec:
+  accessModes: {{ toYaml .Values.backend.persistence.exports.accessModes | nindent 4 }}
+  {{- with .Values.backend.persistence.exports.storageClassName }}
+  storageClassName: {{ . | quote }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.backend.persistence.exports.size | quote }}
+{{- end }}

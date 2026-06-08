@@ -1,0 +1,114 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend build, vet, test
+    runs-on: ubuntu-latest
+    services:
+      mongodb:
+        image: mongo:8.2.2
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --quiet --eval 'db.adminCommand({ ping: 1 })'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+      - name: Download dependencies
+        working-directory: backend
+        run: go mod download
+      - name: Format check
+        run: test -z "$(gofmt -l backend llm-adapter)"
+      - name: Vet
+        working-directory: backend
+        run: go vet ./...
+      - name: Test
+        working-directory: backend
+        run: go test ./...
+      - name: Build
+        working-directory: backend
+        run: go build -trimpath ./cmd/api
+
+  llm-adapter:
+    name: LLM adapter build, vet, test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: llm-adapter/go.mod
+          cache-dependency-path: llm-adapter/go.sum
+      - name: Download dependencies
+        working-directory: llm-adapter
+        run: go mod download
+      - name: Vet
+        working-directory: llm-adapter
+        run: go vet ./...
+      - name: Test
+        working-directory: llm-adapter
+        run: go test ./...
+      - name: Build
+        working-directory: llm-adapter
+        run: go build -trimpath ./cmd/llm-adapter
+
+  frontend:
+    name: Frontend install and build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci --ignore-scripts --audit=false --fund=false
+      - name: Build
+        working-directory: frontend
+        run: npm run build
+
+  math-engine:
+    name: Math engine build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install compiler
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends g++ make
+      - name: Test
+        working-directory: math-engine
+        run: make test
+      - name: Build
+        working-directory: math-engine
+        run: make
+
+  helm:
+    name: Helm chart lint and template
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+        with:
+          version: latest
+      - name: Lint chart
+        run: helm lint charts/logarift
+      - name: Render chart
+        run: helm template logarift charts/logarift >/tmp/logarift.yaml

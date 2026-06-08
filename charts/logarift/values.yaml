@@ -1,0 +1,235 @@
+# nameOverride -- Override the chart name.
+nameOverride: ""
+# fullnameOverride -- Override the fully qualified release name.
+fullnameOverride: ""
+
+# imagePullSecrets -- Optional image pull secrets for private registries.
+imagePullSecrets: []
+
+serviceAccount:
+  # serviceAccount.create -- Create a dedicated service account.
+  create: true
+  # serviceAccount.name -- Existing service account name when create=false.
+  name: ""
+  # serviceAccount.annotations -- Extra service account annotations.
+  annotations: {}
+
+podSecurityContext: {}
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+  readOnlyRootFilesystem: false
+
+backend:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/mistervvp/logarift-api
+    tag: ""
+    digest: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8080
+  env: {}
+  extraEnv: []
+  resources: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  persistence:
+    uploads:
+      enabled: true
+      size: 5Gi
+      storageClassName: ""
+      accessModes: ["ReadWriteOnce"]
+    exports:
+      enabled: true
+      size: 1Gi
+      storageClassName: ""
+      accessModes: ["ReadWriteOnce"]
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  podDisruptionBudget:
+    enabled: false
+    minAvailable: 1
+
+frontend:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/mistervvp/logarift-frontend
+    tag: ""
+    digest: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 5173
+  # frontend.apiBaseURL -- Browser-facing API base URL. Empty uses same origin, useful behind one ingress host.
+  apiBaseURL: ""
+  env: {}
+  extraEnv: []
+  resources: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  livenessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+mathEngine:
+  replicaCount: 1
+  image:
+    repository: ghcr.io/mistervvp/logarift-math-engine
+    tag: ""
+    digest: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8090
+  env: {}
+  extraEnv: []
+  resources: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  livenessProbe:
+    httpGet:
+      path: /health/live
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /health/ready
+      port: http
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+llmAdapter:
+  enabled: false
+  replicaCount: 1
+  image:
+    repository: ghcr.io/mistervvp/logarift-llm-adapter
+    tag: ""
+    digest: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 8091
+  ollamaURL: http://ollama:11434
+  model: qwen3:8b
+  timeoutMS: 15000
+  minConfidence: "0.70"
+  promptPrivacyMode: text_only
+  allowRemoteRuntime: false
+  env: {}
+  extraEnv: []
+  resources: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+
+mongodb:
+  # mongodb.enabled -- Deploy an in-cluster MongoDB for local/small installs. Disable to use an external MongoDB URI.
+  enabled: true
+  image:
+    repository: mongo
+    tag: "8.2.2"
+    pullPolicy: IfNotPresent
+  database: logarift
+  external:
+    uri: ""
+    existingSecret: ""
+    existingSecretKey: uri
+  persistence:
+    enabled: true
+    size: 10Gi
+    storageClassName: ""
+    accessModes: ["ReadWriteOnce"]
+  resources: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+
+valkey:
+  # valkey.enabled -- Deploy in-cluster Valkey Streams. Disable to use an external Valkey/Redis URL or to disable async queue dispatch.
+  enabled: true
+  image:
+    repository: valkey/valkey
+    tag: "9.1.0-alpine"
+    pullPolicy: IfNotPresent
+  external:
+    url: ""
+    existingSecret: ""
+    existingSecretKey: url
+  stream: logarift:llm_enrichment_jobs
+  group: logarift-backend
+  consumer: backend-1
+  persistence:
+    enabled: true
+    size: 2Gi
+    storageClassName: ""
+    accessModes: ["ReadWriteOnce"]
+  resources: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: logarift.local
+      paths:
+        - path: /
+          pathType: Prefix
+          service: frontend
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /health
+          pathType: Prefix
+          service: backend
+        - path: /uploads
+          pathType: Prefix
+          service: backend
+  tls: []

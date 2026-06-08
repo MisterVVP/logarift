@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import './styles.css';
 
-const API_BASE = import.meta.env.VITE_LOGARIFT_API_BASE_URL || 'http://localhost:8080';
+const configuredAPIBase = import.meta.env.VITE_LOGARIFT_API_BASE_URL;
+const API_BASE = (configuredAPIBase === undefined ? 'http://localhost:8080' : configuredAPIBase).replace(/\/$/, '');
 const goalStatuses = ['active', 'completed', 'deferred', 'abandoned'];
 const levels = [
   { value: 'green', label: 'Papercut', description: 'Small annoyance', tooltip: 'Use green when the friction was visible but did not break flow.' },
@@ -26,8 +27,12 @@ function defaultHeaders(options) {
   return { 'Content-Type': 'application/json', ...(options.headers || {}) };
 }
 
+function apiURL(path) {
+  return `${API_BASE}${path}`;
+}
+
 async function api(path, options = {}) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(apiURL(path), {
     ...options,
     headers: defaultHeaders(options),
   });
@@ -245,7 +250,7 @@ function EventComposer({ onCreated }) {
       setLastEvent(result.event);
       setLastEnrichment(result.enrichment || result.event?.enrichment || null);
       if (result.enrichment?.job_id) {
-        pollEnrichment(result.event.id, result.enrichment.job_id);
+        streamEnrichment(result.event.id, result.enrichment.job_id);
       }
       setNotes('');
       setOccurredAt(nowLocalInput());
@@ -257,8 +262,38 @@ function EventComposer({ onCreated }) {
     }
   }
 
-  async function pollEnrichment(eventId, jobId) {
+  function streamEnrichment(eventId, jobId) {
     const terminal = new Set(['succeeded', 'partially_succeeded', 'failed', 'timed_out', 'cancelled', 'disabled', 'not_queued']);
+
+    if (!window.EventSource) {
+      pollEnrichment(eventId, jobId, terminal);
+      return;
+    }
+
+    const source = new EventSource(apiURL(`/api/v1/enrichment-jobs/${jobId}/events`));
+    source.addEventListener('enrichment', async (message) => {
+      try {
+        const jobRes = JSON.parse(message.data);
+        const eventRes = await api(`/api/v1/friction-events/${eventId}`);
+        setLastEvent(eventRes.event);
+        const nextEnrichment = mergeEnrichmentWithJob(eventRes.event?.enrichment, jobRes, jobId);
+        setLastEnrichment(nextEnrichment);
+        onCreated();
+        if (terminal.has(nextEnrichment.llm_status)) {
+          source.close();
+        }
+      } catch (err) {
+        source.close();
+        setLastEnrichment((current) => current ? { ...current, user_message: err.message } : current);
+      }
+    });
+    source.addEventListener('error', () => {
+      source.close();
+      pollEnrichment(eventId, jobId, terminal);
+    });
+  }
+
+  async function pollEnrichment(eventId, jobId, terminal = new Set(['succeeded', 'partially_succeeded', 'failed', 'timed_out', 'cancelled', 'disabled', 'not_queued'])) {
     for (let attempt = 0; attempt < 20; attempt += 1) {
       await new Promise((resolve) => setTimeout(resolve, 750));
       try {
@@ -270,8 +305,7 @@ function EventComposer({ onCreated }) {
         const nextEnrichment = mergeEnrichmentWithJob(eventRes.event?.enrichment, jobRes, jobId);
         setLastEnrichment(nextEnrichment);
         onCreated();
-        const status = nextEnrichment.llm_status;
-        if (terminal.has(status)) return;
+        if (terminal.has(nextEnrichment.llm_status)) return;
       } catch (err) {
         setLastEnrichment((current) => current ? { ...current, user_message: err.message } : current);
         return;

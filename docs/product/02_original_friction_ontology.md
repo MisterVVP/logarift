@@ -64,13 +64,13 @@ Example:
 
 These may be separate events but one episode.
 
-Episodes may be implemented after MVP.
+Episodes may be implemented after initial release.
 
 ### Workflow Stage
 
 Workflow stage describes where the friction happened in the development workflow.
 
-MVP workflow stages:
+initial release workflow stages:
 
 ```text
 planning
@@ -91,7 +91,7 @@ learning
 
 Friction layer describes the broad nature of the friction.
 
-MVP friction layers:
+initial release friction layers:
 
 ```text
 technical
@@ -115,7 +115,7 @@ Layer meanings:
 
 Friction type is a more specific classification.
 
-MVP friction types:
+initial release friction types:
 
 ```text
 slow_feedback
@@ -153,7 +153,7 @@ still_open
 
 Recovery signal describes how costly it was to return to useful work.
 
-MVP recovery fields:
+initial release recovery fields:
 
 ```text
 resume_time_minutes
@@ -161,7 +161,7 @@ interruption_count
 recovery_minutes
 ```
 
-## MVP Event Description
+## initial release Event Description
 
 A friction event should capture:
 
@@ -179,7 +179,7 @@ what goal/session it affected
 
 Severity is the user's self-assessed impact of the friction event.
 
-Suggested MVP scale:
+Suggested initial release scale:
 
 ```text
 1 = barely noticeable
@@ -193,7 +193,7 @@ Suggested MVP scale:
 
 Cognitive load is the user's self-assessed mental effort caused by the event.
 
-Suggested MVP scale:
+Suggested initial release scale:
 
 ```text
 1 = low mental effort
@@ -207,7 +207,7 @@ Suggested MVP scale:
 
 Emotion valence captures affective direction.
 
-Suggested MVP scale:
+Suggested initial release scale:
 
 ```text
 -2 = strongly negative
@@ -223,7 +223,7 @@ Positive values may be useful when logging recovery, learning, or successful int
 
 Source identifies where the event came from.
 
-MVP sources:
+initial release sources:
 
 ```text
 manual
@@ -231,7 +231,7 @@ seed
 import
 ```
 
-MVP uses `manual` and `seed`. Importers are future scope.
+initial release uses `manual` and `seed`. Importers are future scope.
 
 ## Ontology Evolution
 

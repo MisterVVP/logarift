@@ -75,7 +75,7 @@ func TestRepositoriesIntegration(t *testing.T) {
 	if err := s.workSessions.delete(ctx, ws.ID); err != nil {
 		t.Fatalf("delete session: %v", err)
 	}
-	snap := domain.ScoreSnapshot{ModelVersion: "mvp-0.1", PeriodStart: now, PeriodEnd: now, ScoreType: "daily", Scores: map[string]float64{"fcs": 1}}
+	snap := domain.ScoreSnapshot{ModelVersion: "model-0.1", PeriodStart: now, PeriodEnd: now, ScoreType: "daily", Scores: map[string]float64{"fcs": 1}}
 	if err := s.scoreSnapshots.create(ctx, &snap); err != nil {
 		t.Fatalf("create snapshot: %v", err)
 	}

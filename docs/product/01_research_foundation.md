@@ -59,7 +59,7 @@ Relevant concepts:
 
 Product implication:
 
-The MVP should track interruption count and resume time as first-class friction fields.
+The initial release should track interruption count and resume time as first-class friction fields.
 
 ## Flow Theory
 
@@ -76,7 +76,7 @@ Developer flow can be disrupted by:
 
 Product implication:
 
-The system should later model flow stability, but MVP should start by tracking interruption and recovery signals.
+The system should later model flow stability, but initial release should start by tracking interruption and recovery signals.
 
 ## Self-Determination Theory
 
@@ -100,7 +100,7 @@ In a Developer Experience context, a negative friction event may have a stronger
 
 Product implication:
 
-Future scoring models may weight negative events asymmetrically. MVP should capture emotion valence to support later calibration.
+Future scoring models may weight negative events asymmetrically. initial release should capture emotion valence to support later calibration.
 
 ## Queueing Theory
 
@@ -116,7 +116,7 @@ When utilization approaches capacity, wait time can grow nonlinearly.
 
 Product implication:
 
-The system should eventually model systemic drag using queueing concepts. MVP starts with a simpler systemic drag estimate based on wait time versus active work time.
+The system should eventually model systemic drag using queueing concepts. initial release starts with a simpler systemic drag estimate based on wait time versus active work time.
 
 ## Little's Law
 
@@ -145,7 +145,7 @@ In this project, possible applications include:
 
 Product implication:
 
-Survival analysis is out of MVP scope but belongs to future advanced models.
+Survival analysis is out of initial release scope but belongs to future advanced models.
 
 ## Bayesian Updating
 
@@ -160,7 +160,7 @@ Possible future uses:
 
 Product implication:
 
-Bayesian modeling is out of MVP scope. MVP formulas should be deterministic and explainable.
+Bayesian modeling is out of initial release scope. initial release formulas should be deterministic and explainable.
 
 ## Markov and State-Transition Modeling
 
@@ -175,7 +175,7 @@ Developer work can be approximated as transitions between states such as:
 
 Product implication:
 
-A future model may estimate flow stability from transition probabilities. MVP should only collect enough data to support later state modeling.
+A future model may estimate flow stability from transition probabilities. initial release should only collect enough data to support later state modeling.
 
 ## Software Engineering Productivity Frameworks
 
@@ -203,7 +203,7 @@ The project must not:
 - copy proprietary taxonomies
 - copy internal company dashboards
 - copy private survey instruments
-- represent MVP formulas as scientifically validated universal laws
+- represent initial release formulas as scientifically validated universal laws
 - claim causal certainty from descriptive data
 
 The project should:

@@ -13,10 +13,10 @@ Friction is a compounding signal that affects cognitive load, flow stability, an
 
 The documentation in this folder is split into:
 
-- `product/` for product foundations, MVP boundaries, ontology, data model, local-first principles, and privacy/IP governance.
+- `product/` for product foundations, initial release boundaries, ontology, data model, local-first principles, and privacy/IP governance.
 - `technical/` for implementation architecture decisions and backend/frontend/persistence/math-engine technical notes.
 
-MVP-0 is intentionally documentation-only. It should guide later implementation tasks for the Go backend, React + Vite frontend, MongoDB persistence layer, and C++ math engine.
+initial planning baseline is intentionally documentation-only. It should guide later implementation tasks for the Go backend, React + Vite frontend, MongoDB persistence layer, and C++ math engine.
 
 ## Documentation Map
 
@@ -62,23 +62,23 @@ Includes:
 
 Use this document when implementing event models, validation, UI dropdowns, and analytics grouping.
 
-#### 4. MVP Scope
+#### 4. Initial Release Scope
 
-[product/03_mvp_scope.md](./product/03_mvp_scope.md)
+[product/03_initial_scope.md](./product/03_initial_scope.md)
 
-Defines what is included and excluded from the MVP.
+Defines what is included and excluded from the initial release.
 
-The MVP includes local single-user mode, manual friction logging, goals, sessions, MongoDB persistence, basic dashboarding, C++ scoring service integration, JSON export, and seed/demo data.
+The initial release includes local single-user mode, manual friction logging, goals, sessions, MongoDB persistence, basic dashboarding, C++ scoring service integration, JSON export, and seed/demo data.
 
-The MVP excludes cloud deployment, authentication, team dashboards, IDE plugins, external importers, hidden telemetry, advanced research models, and AI-generated recommendations.
+The initial release excludes cloud deployment, authentication, team dashboards, IDE plugins, external importers, hidden telemetry, advanced research models, and AI-generated recommendations.
 
-#### 5. MVP Math Model
+#### 5. Math Model
 
-[product/04_mvp_math_model.md](./product/04_mvp_math_model.md)
+[product/04_math_model.md](./product/04_math_model.md)
 
 Defines the first deterministic scoring model.
 
-MVP scores include:
+initial release scores include:
 
 - Cognitive Load Accumulator
 - Friction Compounding Index
@@ -91,9 +91,9 @@ The formulas are product hypotheses, not validated universal scientific metrics.
 
 [product/05_mongodb_data_model.md](./product/05_mongodb_data_model.md)
 
-Defines the MVP MongoDB collections and document shapes.
+Defines the initial release MongoDB collections and document shapes.
 
-MVP collections:
+initial release collections:
 
 ```text
 friction_events
@@ -110,9 +110,9 @@ Use this document when implementing repositories, indexes, validation, seed data
 
 [product/06_local_first_architecture.md](./product/06_local_first_architecture.md)
 
-Defines the high-level MVP architecture.
+Defines the high-level initial release architecture.
 
-MVP components:
+initial release components:
 
 ```text
 React + Vite frontend
@@ -182,7 +182,7 @@ Defines the future optional local-only classifier service boundary, training dat
 
 [technical/system-design.md](./technical/system-design.md)
 
-Living system-design document for runtime component boundaries, asynchronous LLM enrichment, backend worker integration, UI polling, scoring, observability, and Docker Compose integration testing.
+Living system-design document for runtime component boundaries, asynchronous LLM enrichment, backend worker integration, UI SSE updates, scoring, observability, and Docker Compose/Kubernetes deployment.
 
 #### 7. Local Check Runbook
 
@@ -195,23 +195,23 @@ Step-by-step commands for testing the backend, math engine, scoring endpoint, fr
 
 Implementation work should preserve these constraints:
 
-- MongoDB is the MVP persistence backend.
+- MongoDB is the initial release persistence backend.
 - The system is local-first.
-- The MVP is single-user.
-- The MVP does not include authentication.
-- The MVP does not include cloud sync.
-- The MVP does not include hidden telemetry.
-- The MVP does not rank developers.
-- The MVP math is deterministic and explainable.
+- The initial release is single-user.
+- The initial release does not include authentication.
+- The initial release does not include cloud sync.
+- The initial release does not include hidden telemetry.
+- The initial release does not rank developers.
+- The initial release math is deterministic and explainable.
 - The default logging UI uses three fields and relies on local deterministic enrichment for structured fields.
-- The MVP C++ math engine is a separate service in Docker Compose and remains CLI-compatible for local deterministic tests.
+- The initial release C++ math engine is a separate service in Docker Compose and remains CLI-compatible for local deterministic tests.
 - Proprietary company taxonomies, survey wording, dashboards, and scoring systems must not be copied.
 
 ## Contribution Notes
 
 When adding or changing documentation:
 
-- keep MVP and future scope clearly separated
+- keep initial release and future scope clearly separated
 - prefer precise implementation-oriented language
 - preserve original project terminology unless intentionally evolving it
 - update this README when adding new documentation files

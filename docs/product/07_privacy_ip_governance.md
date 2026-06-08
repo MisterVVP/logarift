@@ -10,11 +10,11 @@ The system should be useful for Developer Experience improvement without becomin
 
 ### Local-First by Default
 
-MVP data stays local.
+initial release data stays local.
 
 No cloud account is required.
 
-No cloud sync is included in MVP.
+No cloud sync is included in initial release.
 
 ### Explicit User Control
 
@@ -46,7 +46,7 @@ Future team features must avoid individual leaderboards.
 
 Free-text notes may contain sensitive details.
 
-MVP notes stay local in MongoDB.
+initial release notes stay local in MongoDB.
 
 Future export and team features should treat notes as sensitive by default.
 
@@ -54,7 +54,7 @@ Future export and team features should treat notes as sensitive by default.
 
 The user should be able to delete local data.
 
-MVP may implement deletion at the entity level.
+initial release may implement deletion at the entity level.
 
 Future versions should include full local data reset.
 
@@ -117,7 +117,7 @@ Do not copy:
 
 Do not claim:
 
-- that MVP formulas are scientifically validated universal metrics
+- that initial release formulas are scientifically validated universal metrics
 - that descriptive scores prove causality
 - that the system can measure individual developer productivity completely
 - that friction scores should be used for performance evaluation

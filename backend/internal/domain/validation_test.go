@@ -58,7 +58,7 @@ func TestOtherModelValidation(t *testing.T) {
 	if err := session.Validate(); err != nil {
 		t.Fatalf("session valid: %v", err)
 	}
-	snap := ScoreSnapshot{SchemaVersion: CurrentSchemaVersion, ModelVersion: "mvp-0.1", PeriodStart: now, PeriodEnd: now, ScoreType: "daily"}
+	snap := ScoreSnapshot{SchemaVersion: CurrentSchemaVersion, ModelVersion: "model-0.1", PeriodStart: now, PeriodEnd: now, ScoreType: "daily"}
 	if err := snap.Validate(); err != nil {
 		t.Fatalf("snapshot valid: %v", err)
 	}
