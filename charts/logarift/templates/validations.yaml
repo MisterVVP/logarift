@@ -1,6 +1,3 @@
-{{- if hasKey .Values "ingress" -}}
-{{- fail "ingress values are no longer supported; use gateway and httpRoute values with Gateway API instead" -}}
-{{- end -}}
 {{- if and (not .Values.mongodb.enabled) (eq .Values.mongodb.external.uri "") (eq .Values.mongodb.external.existingSecret "") -}}
 {{- fail "mongodb.enabled=false requires mongodb.external.uri or mongodb.external.existingSecret" -}}
 {{- end -}}
