@@ -10,21 +10,15 @@ import (
 	"testing"
 	"time"
 
-	"github.com/MisterVVP/logarift/backend/internal/config"
-	"github.com/MisterVVP/logarift/backend/internal/database"
 	"github.com/MisterVVP/logarift/backend/internal/store/cqrs"
 	"github.com/MisterVVP/logarift/backend/internal/store/mongostore"
+	"github.com/MisterVVP/logarift/backend/internal/testsupport"
 	"github.com/MisterVVP/logarift/backend/internal/version"
 )
 
 func newAPITestServer(t *testing.T) *Server {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	t.Cleanup(cancel)
-	client, err := database.Connect(ctx, config.Config{MongoDBURI: "mongodb://localhost:27017", MongoDBDatabase: "api_handlers_test" + time.Now().Format("150405.000000000")})
-	if err != nil {
-		t.Fatalf("database.Connect: %v", err)
-	}
+	client := testsupport.ConnectMongo(t, "api_handlers_test_"+time.Now().Format("150405000000000"))
 	t.Cleanup(func() { _ = client.Database().Drop(context.Background()) })
 	stores := mongostore.New(client)
 	dispatcher := cqrs.NewDispatcher()
