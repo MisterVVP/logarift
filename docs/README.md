@@ -190,6 +190,12 @@ Living system-design document for runtime component boundaries, asynchronous LLM
 
 Step-by-step commands for testing the backend, math engine, scoring endpoint, frontend, and Docker Compose stack.
 
+#### 8. Package Publishing Runbook
+
+[runbooks/release_packages.md](./runbooks/release_packages.md)
+
+Documents GHCR Docker image publishing, Helm OCI chart publishing, GitHub Release assets, development branch package tags, and install commands.
+
 
 ## Design Constraints
 

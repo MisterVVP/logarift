@@ -129,7 +129,7 @@ LLM adapter: http://localhost:8091/health/live
 
 ## Kubernetes Deployment
 
-A Helm chart is available under `charts/logarift` for Kubernetes installs. By default it deploys the frontend, backend, math engine, MongoDB, and Valkey. MongoDB and Valkey can be disabled when using externally managed services:
+A Helm chart is available under `charts/logarift` for Kubernetes installs. Published releases are also available as OCI Helm charts at `oci://ghcr.io/mistervvp/charts/logarift`, alongside Docker images under `ghcr.io/mistervvp`. By default the chart deploys the frontend, backend, math engine, MongoDB, and Valkey. MongoDB and Valkey can be disabled when using externally managed services:
 
 ```bash
 helm upgrade --install logarift charts/logarift \
@@ -140,6 +140,15 @@ helm upgrade --install logarift charts/logarift \
 ```
 
 Most Kubernetes placement controls are optional and configurable per component, including `nodeSelector`, `affinity`, pod anti-affinity through `affinity`, `tolerations`, and `topologySpreadConstraints`. The chart also supports existing Secrets for MongoDB and Valkey connection strings, persistence settings, probes, resources, ingress, and optional LLM adapter deployment.
+
+Install a published chart from GHCR by version:
+
+```bash
+helm upgrade --install logarift oci://ghcr.io/mistervvp/charts/logarift \
+  --version 0.1.0
+```
+
+Container images are published to `ghcr.io/mistervvp/logarift-api`, `ghcr.io/mistervvp/logarift-frontend`, `ghcr.io/mistervvp/logarift-math-engine`, and `ghcr.io/mistervvp/logarift-llm-adapter`. GitHub Releases include the packaged Helm chart, repository source archives, and checksums; pushes to `dev-*` branches publish development image tags and development chart versions for pre-release testing. See `docs/runbooks/release_packages.md` for the complete publishing and install workflow.
 
 ## API Overview
 
