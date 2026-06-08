@@ -157,7 +157,6 @@ For MicroK8s, enable DNS, hostpath storage, Helm, and the MicroK8s routing addon
 ```bash
 microk8s status --wait-ready
 microk8s enable dns hostpath-storage helm3 ingress
-microk8s kubectl create namespace logarift
 cat > /tmp/logarift-microk8s-values.yaml <<'EOF'
 gateway:
   enabled: true
@@ -170,7 +169,7 @@ httpRoute:
     - logarift.local
 EOF
 microk8s helm3 upgrade --install logarift charts/logarift \
-  --namespace logarift \
+  --create-namespace --namespace logarift \
   --values /tmp/logarift-microk8s-values.yaml
 ```
 
