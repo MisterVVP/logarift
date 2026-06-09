@@ -1,0 +1,145 @@
+{{- if .Values.ollama.enabled }}
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: {{ include "logarift.fullname" . }}-ollama
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+spec:
+  serviceName: {{ include "logarift.fullname" . }}-ollama
+  replicas: {{ .Values.ollama.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "logarift.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: ollama
+  template:
+    metadata:
+      labels:
+        {{- include "logarift.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: ollama
+        {{- with .Values.ollama.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      {{- with .Values.ollama.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "logarift.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if .Values.ollama.modelInit.enabled }}
+      initContainers:
+        - name: prepare-model
+          image: {{ include "logarift.image" (dict "root" . "image" .Values.ollama.image) }}
+          imagePullPolicy: {{ .Values.ollama.image.pullPolicy }}
+          env:
+            - name: OLLAMA_HOST
+              value: "127.0.0.1:11434"
+            - name: OLLAMA_BASE_MODEL
+              value: {{ .Values.ollama.modelInit.baseModel | quote }}
+            - name: OLLAMA_MODEL
+              value: {{ .Values.ollama.modelInit.model | quote }}
+          command:
+            - /bin/sh
+            - -ec
+            - |
+              ollama serve &
+              server_pid="$!"
+              trap 'kill "${server_pid}" 2>/dev/null || true' EXIT
+
+              until ollama list >/dev/null 2>&1; do
+                sleep 2
+              done
+
+              ollama pull "${OLLAMA_BASE_MODEL}"
+              ollama create "${OLLAMA_MODEL}" -f /modelfiles/Modelfile
+              ollama list
+          volumeMounts:
+            - name: data
+              mountPath: /root/.ollama
+            - name: modelfile
+              mountPath: /modelfiles
+              readOnly: true
+      {{- end }}
+      containers:
+        - name: ollama
+          image: {{ include "logarift.image" (dict "root" . "image" .Values.ollama.image) }}
+          imagePullPolicy: {{ .Values.ollama.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 11434
+          env:
+            - name: OLLAMA_HOST
+              value: "0.0.0.0:11434"
+            {{- range $name, $value := .Values.ollama.env }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
+            {{- with .Values.ollama.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
+          volumeMounts:
+            - name: data
+              mountPath: /root/.ollama
+          {{- with .Values.ollama.livenessProbe }}
+          livenessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.ollama.readinessProbe }}
+          readinessProbe:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+          {{- with .Values.ollama.resources }}
+          resources:
+            {{- toYaml . | nindent 12 }}
+          {{- end }}
+      {{- if or (not .Values.ollama.persistence.enabled) .Values.ollama.modelInit.enabled }}
+      volumes:
+        {{- if not .Values.ollama.persistence.enabled }}
+        - name: data
+          emptyDir: {}
+        {{- end }}
+        {{- if .Values.ollama.modelInit.enabled }}
+        - name: modelfile
+          configMap:
+            name: {{ include "logarift.fullname" . }}-ollama-modelfile
+        {{- end }}
+      {{- end }}
+      {{- include "logarift.podScheduling" .Values.ollama | nindent 6 }}
+  {{- if .Values.ollama.persistence.enabled }}
+  volumeClaimTemplates:
+    - metadata:
+        name: data
+      spec:
+        accessModes: {{ toYaml .Values.ollama.persistence.accessModes | nindent 10 }}
+        {{- with .Values.ollama.persistence.storageClassName }}
+        storageClassName: {{ . | quote }}
+        {{- end }}
+        resources:
+          requests:
+            storage: {{ .Values.ollama.persistence.size | quote }}
+  {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "logarift.fullname" . }}-ollama
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+spec:
+  type: {{ .Values.ollama.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.ollama.service.port }}
+      targetPort: http
+  selector:
+    {{- include "logarift.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+{{- end }}

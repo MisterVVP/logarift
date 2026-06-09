@@ -8,6 +8,10 @@ Backend service:
 LLM adapter service:
   {{ include "logarift.fullname" . }}-llm-adapter:{{ .Values.llmAdapter.service.port }}
 {{- end }}
+{{- if .Values.ollama.enabled }}
+Ollama service:
+  {{ include "logarift.fullname" . }}-ollama:{{ .Values.ollama.service.port }}
+{{- end }}
 
 {{- if .Values.gateway.enabled }}
 Gateway API HTTPRoute hosts:

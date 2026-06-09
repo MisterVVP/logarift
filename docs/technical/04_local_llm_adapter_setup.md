@@ -90,20 +90,20 @@ These Modelfiles intentionally do not emit `suggested_next_action`, recommendati
 
 ## Project setup with adapter enabled
 
-Smoke-test the local runtime before starting Logarift:
+Create `logarift-enricher-qwen3-8b` from the optional Logarift Modelfile above, then smoke-test the local runtime before starting Logarift:
 
 ```bash
 curl http://localhost:11434/api/chat \
-  -d '{"model":"qwen3.6","messages":[{"role":"user","content":"Return only JSON: {\"ok\":true}"}],"stream":false,"format":"json"}'
+  -d '{"model":"logarift-enricher-qwen3-8b","messages":[{"role":"user","content":"Return only JSON: {\"ok\":true}"}],"stream":false,"format":"json"}'
 ```
 
-If using the fallback model, replace `qwen3.6` with `qwen3:8b`. If using a Logarift Modelfile alias, replace it with `logarift-enricher-qwen3-8b` or `logarift-enricher-qwen36`.
+If using a stronger Logarift Modelfile alias, replace `logarift-enricher-qwen3-8b` with `logarift-enricher-qwen3-14b` or `logarift-enricher-qwen36`.
 
 Enable the adapter for Docker Compose:
 
 ```bash
 export LOGARIFT_LLM_ADAPTER_ENABLED=true
-export LOGARIFT_LLM_MODEL=qwen3.6
+export LOGARIFT_LLM_MODEL=logarift-enricher-qwen3-8b
 # Optional on Linux if host-gateway is unavailable; the compose default is usually correct:
 # export LOGARIFT_LLM_RUNTIME_URL=http://host.docker.internal:11434
 docker compose up --build
@@ -113,7 +113,7 @@ Windows PowerShell equivalent:
 
 ```powershell
 $env:LOGARIFT_LLM_ADAPTER_ENABLED = "true"
-$env:LOGARIFT_LLM_MODEL = "qwen3.6"
+$env:LOGARIFT_LLM_MODEL = "logarift-enricher-qwen3-8b"
 # Optional; the compose default is usually correct:
 # $env:LOGARIFT_LLM_RUNTIME_URL = "http://host.docker.internal:11434"
 docker compose up --build

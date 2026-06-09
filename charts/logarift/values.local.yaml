@@ -24,5 +24,16 @@ valkey:
   persistence:
     storageClassName: microk8s-hostpath
 
+ollama:
+  enabled: true
+  persistence:
+    storageClassName: microk8s-hostpath
+
 llmAdapter:
-  enabled: false
+  enabled: true
+  deploy: true
+  model: logarift-enricher-qwen3-8b
+  timeoutMS: 15000
+  minConfidence: "0.70"
+  promptPrivacyMode: text_only
+  allowRemoteRuntime: true

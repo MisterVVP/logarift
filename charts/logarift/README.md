@@ -1,6 +1,6 @@
 # Logarift Helm Chart
 
-This chart deploys the Logarift frontend, Go backend, C++ math engine, optional LLM adapter, MongoDB, and Valkey Streams.
+This chart deploys the Logarift frontend, Go backend, C++ math engine, optional LLM adapter, optional Ollama runtime, MongoDB, and Valkey Streams.
 
 ## Deployment posture
 
@@ -34,26 +34,18 @@ kubectl port-forward svc/logarift-frontend 5173:5173
 
 ## Local Kubernetes quick start
 
-MicroK8s users can enable DNS, hostpath storage, Helm, and the MicroK8s routing addon. The addon is named `ingress`, but current MicroK8s versions include Gateway API support and expose a Traefik Gateway that this chart can attach to without creating Kubernetes Ingress resources:
+MicroK8s users can enable DNS, hostpath storage, Helm, and the MicroK8s routing addon. The addon is named `ingress`, but current MicroK8s versions include Gateway API support and expose a Traefik Gateway that this chart can attach to without creating Kubernetes Ingress resources.
+
+Use `values.local.yaml` for a local MicroK8s install with chart-managed Ollama and the LLM adapter enabled. Ollama remains disabled in the base chart values. When enabled locally, the Ollama init container pulls `qwen3:8b` and creates the default `logarift-enricher-qwen3-8b` alias from the bundled Logarift Modelfile before the Ollama container starts.
 
 ```bash
 microk8s status --wait-ready
 microk8s enable dns hostpath-storage helm3 ingress
-microk8s kubectl create namespace logarift
-cat > /tmp/logarift-microk8s-values.yaml <<'EOF'
-gateway:
-  enabled: true
-  create: false
-httpRoute:
-  parentRefs:
-    - name: traefik-gateway
-      namespace: ingress
-  hostnames:
-    - logarift.local
-EOF
 microk8s helm3 upgrade --install logarift charts/logarift \
-  --namespace logarift \
-  --values /tmp/logarift-microk8s-values.yaml
+  --create-namespace --namespace logarift \
+  --values charts/logarift/values.local.yaml
+microk8s kubectl -n logarift rollout status statefulset/logarift-ollama
+microk8s kubectl -n logarift rollout status deploy/logarift-llm-adapter
 ```
 
 For Minikube, kind, Docker Desktop Kubernetes, and other local clusters without a Gateway API controller, install with defaults and use port-forwarding:
@@ -80,9 +72,11 @@ helm upgrade --install logarift charts/logarift \
 
 To attach to an existing Gateway, leave `gateway.create=false` and set either `gateway.name` or explicit `httpRoute.parentRefs`. The default HTTPRoute sends `/api`, `/health`, and `/uploads` to the backend service and `/` to the frontend service.
 
-## LLM adapter service discovery
+## LLM adapter and Ollama service discovery
 
-When `llmAdapter.enabled=true`, the backend integration is enabled. By default `llmAdapter.deploy=true` also creates a ClusterIP Service for the adapter. The backend defaults to the cluster-local DNS URL `http://<release>-logarift-llm-adapter.<namespace>.svc.<clusterDomain>:8091`, so pods can reach the adapter regardless of whether they run on the same or different nodes. Set `llmAdapter.deploy=false` and provide `llmAdapter.backendURL` when using an existing adapter Service or custom service name. Configure the adapter's model runtime with `llmAdapter.ollamaURL`; for an in-cluster Ollama-compatible runtime, use that runtime's Service DNS name.
+When `llmAdapter.enabled=true`, the backend integration is enabled. By default `llmAdapter.deploy=true` also creates a ClusterIP Service for the adapter. The backend defaults to the cluster-local DNS URL `http://<release>-logarift-llm-adapter.<namespace>.svc.<clusterDomain>:8091`, so pods can reach the adapter regardless of whether they run on the same or different nodes. Set `llmAdapter.deploy=false` and provide `llmAdapter.backendURL` when using an existing adapter Service or custom service name.
+
+The chart can also deploy an in-cluster Ollama runtime with `ollama.enabled=true`; it is disabled by default. When both `llmAdapter.enabled=true` and `ollama.enabled=true`, an empty `llmAdapter.ollamaURL` makes the adapter use the chart-managed Ollama Service DNS name. The default chart model is `logarift-enricher-qwen3-8b`, and `ollama.modelInit.enabled=true` prepares that alias automatically from `qwen3:8b`. If you keep `ollama.enabled=false`, set `llmAdapter.ollamaURL` to an existing Ollama-compatible runtime Service URL.
 
 ## External MongoDB and Valkey
 
@@ -133,4 +127,4 @@ helm upgrade --install logarift oci://ghcr.io/mistervvp/charts/logarift \
   --version 0.1.0-dev.42
 ```
 
-For immutable deployments, set image digests with `backend.image.digest`, `frontend.image.digest`, `mathEngine.image.digest`, and `llmAdapter.image.digest`.
+For immutable deployments, set image digests with `backend.image.digest`, `frontend.image.digest`, `mathEngine.image.digest`, `llmAdapter.image.digest`, and `ollama.image.digest`.

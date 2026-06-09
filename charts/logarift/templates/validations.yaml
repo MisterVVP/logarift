@@ -7,3 +7,7 @@
 {{- if and .Values.llmAdapter.enabled (not .Values.llmAdapter.deploy) (eq .Values.llmAdapter.backendURL "") -}}
 {{- fail "llmAdapter.enabled=true with llmAdapter.deploy=false requires llmAdapter.backendURL for an existing adapter Service" -}}
 {{- end -}}
+
+{{- if and .Values.llmAdapter.enabled (not .Values.ollama.enabled) (eq .Values.llmAdapter.ollamaURL "") -}}
+{{- fail "llmAdapter.enabled=true requires ollama.enabled=true or llmAdapter.ollamaURL for an existing Ollama-compatible runtime" -}}
+{{- end -}}
