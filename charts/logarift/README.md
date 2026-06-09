@@ -78,6 +78,44 @@ When `llmAdapter.enabled=true`, the backend integration is enabled. By default `
 
 The chart can also deploy an in-cluster Ollama runtime with `ollama.enabled=true`; it is disabled by default. When both `llmAdapter.enabled=true` and `ollama.enabled=true`, an empty `llmAdapter.ollamaURL` makes the adapter use the chart-managed Ollama Service DNS name. The default chart model is `logarift-enricher-qwen3-8b`, and `ollama.modelInit.enabled=true` prepares that alias automatically from `qwen3:8b`. If you keep `ollama.enabled=false`, set `llmAdapter.ollamaURL` to an existing Ollama-compatible runtime Service URL.
 
+## GPU acceleration for chart-managed Ollama
+
+Chart-managed Ollama is CPU-only by default (`ollama.acceleration.type=none`) so production installs do not request GPU resources, mount host devices, add GPU-specific environment variables, or run privileged containers unless explicitly configured. GPU acceleration applies only to the `ollama` StatefulSet/container; the `llm-adapter` remains GPU-free because it calls Ollama over HTTP.
+
+AMD local MicroK8s/single-node testing uses the ROCm Ollama image and direct host-device mounts:
+
+```yaml
+ollama:
+  enabled: true
+  image:
+    repository: ollama/ollama
+    tag: rocm
+  acceleration:
+    type: amd
+    amd:
+      hostDevices:
+        enabled: true
+        privileged: true
+      hsaOverrideGfxVersion: "10.3.0" # optional, useful for some RX 6900 XT setups
+```
+
+In this mode, the Ollama container mounts `/dev/kfd` and `/dev/dri`; only that container is made privileged when `hostDevices.privileged=true`. AMD clusters with a GPU device plugin can instead disable host devices and set `ollama.acceleration.amd.resourceName`, for example `amd.com/gpu`, which adds a GPU limit merged with any existing `ollama.resources`.
+
+NVIDIA mode expects working NVIDIA drivers and the NVIDIA Kubernetes device plugin on the selected node. It requests `ollama.acceleration.gpuCount` of the configured resource name, defaulting to `nvidia.com/gpu`, and adds `NVIDIA_VISIBLE_DEVICES` plus `NVIDIA_DRIVER_CAPABILITIES` only to the Ollama container:
+
+```yaml
+ollama:
+  enabled: true
+  image:
+    repository: ollama/ollama
+    tag: latest
+  acceleration:
+    type: nvidia
+    gpuCount: 1
+```
+
+Use `ollama.acceleration.runtimeClassName`, `ollama.acceleration.nodeSelector`, and `ollama.acceleration.tolerations` when GPU nodes require a RuntimeClass or special scheduling. Example overlays are available in `charts/logarift/examples/values.local-amd-rocm.yaml` and `charts/logarift/examples/values.local-nvidia.yaml`.
+
 ## External MongoDB and Valkey
 
 MongoDB and Valkey are enabled by default for local or small-cluster installs. Disable them and provide externally managed connection strings when your cluster already has these services:

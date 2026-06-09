@@ -1,0 +1,14 @@
+ollama:
+  enabled: true
+  image:
+    repository: ollama/ollama
+    tag: latest
+    pullPolicy: IfNotPresent
+  acceleration:
+    type: nvidia
+    gpuCount: 1
+
+llmAdapter:
+  enabled: true
+  deploy: true
+  timeoutMS: 120000

@@ -42,3 +42,18 @@ llmAdapter:
   minConfidence: "0.70"
   promptPrivacyMode: text_only
   allowRemoteRuntime: true
+
+# GPU acceleration examples for chart-managed Ollama are intentionally kept
+# disabled here so the default local install remains CPU-only and portable.
+#
+# AMD RX 6900 XT / ROCm local testing:
+#   microk8s helm3 upgrade --install logarift charts/logarift \
+#     --namespace logarift \
+#     --values charts/logarift/values.local.yaml \
+#     --values charts/logarift/examples/values.local-amd-rocm.yaml
+#
+# NVIDIA local testing with the NVIDIA device plugin installed:
+#   microk8s helm3 upgrade --install logarift charts/logarift \
+#     --namespace logarift \
+#     --values charts/logarift/values.local.yaml \
+#     --values charts/logarift/examples/values.local-nvidia.yaml

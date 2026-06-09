@@ -77,6 +77,43 @@
         },
         "env": {"type": "object"},
         "extraEnv": {"type": "array"},
+        "acceleration": {
+          "type": "object",
+          "properties": {
+            "type": {"enum": ["none", "amd", "nvidia"]},
+            "gpuCount": {"type": "integer", "minimum": 1},
+            "runtimeClassName": {"type": "string"},
+            "nodeSelector": {"type": "object"},
+            "tolerations": {"type": "array"},
+            "extraEnv": {"type": "array"},
+            "amd": {
+              "type": "object",
+              "properties": {
+                "imageTag": {"type": "string"},
+                "hostDevices": {
+                  "type": "object",
+                  "properties": {
+                    "enabled": {"type": "boolean"},
+                    "privileged": {"type": "boolean"},
+                    "kfdPath": {"type": "string"},
+                    "driPath": {"type": "string"}
+                  }
+                },
+                "hsaOverrideGfxVersion": {"type": "string"},
+                "resourceName": {"type": "string"}
+              }
+            },
+            "nvidia": {
+              "type": "object",
+              "properties": {
+                "imageTag": {"type": "string"},
+                "resourceName": {"type": "string"},
+                "visibleDevices": {"type": "string"},
+                "driverCapabilities": {"type": "string"}
+              }
+            }
+          }
+        },
         "resources": {"type": "object"},
         "podAnnotations": {"type": "object"},
         "podLabels": {"type": "object"},

@@ -1,0 +1,18 @@
+ollama:
+  enabled: true
+  image:
+    repository: ollama/ollama
+    tag: rocm
+    pullPolicy: IfNotPresent
+  acceleration:
+    type: amd
+    amd:
+      hostDevices:
+        enabled: true
+        privileged: true
+      hsaOverrideGfxVersion: "10.3.0"
+
+llmAdapter:
+  enabled: true
+  deploy: true
+  timeoutMS: 120000
