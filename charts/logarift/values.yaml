@@ -30,7 +30,7 @@ backend:
   replicaCount: 1
   image:
     repository: ghcr.io/mistervvp/logarift-api
-    tag: "sha-df1ccac"
+    tag: "latest"
     digest: ""
     pullPolicy: IfNotPresent
   service:
@@ -76,7 +76,7 @@ frontend:
   replicaCount: 1
   image:
     repository: ghcr.io/mistervvp/logarift-frontend
-    tag: "sha-df1ccac"
+    tag: "latest"
     digest: ""
     pullPolicy: IfNotPresent
   service:
@@ -110,7 +110,7 @@ mathEngine:
   replicaCount: 1
   image:
     repository: ghcr.io/mistervvp/logarift-math-engine
-    tag: "sha-df1ccac"
+    tag: "latest"
     digest: ""
     pullPolicy: IfNotPresent
   service:
@@ -146,7 +146,7 @@ llmAdapter:
   replicaCount: 1
   image:
     repository: ghcr.io/mistervvp/logarift-llm-adapter
-    tag: "sha-df1ccac"
+    tag: "latest"
     digest: ""
     pullPolicy: IfNotPresent
   service:

@@ -5,6 +5,7 @@ on:
     types: [published]
   push:
     branches:
+      - main
       - dev-*
   workflow_dispatch:
 
@@ -64,7 +65,7 @@ jobs:
           tags: |
             type=semver,pattern={{version}},enable=${{ github.event_name == 'release' }}
             type=semver,pattern={{major}}.{{minor}},enable=${{ github.event_name == 'release' && !github.event.release.prerelease }}
-            type=raw,value=latest,enable=${{ github.event_name == 'release' && !github.event.release.prerelease }}
+            type=raw,value=latest,enable=${{ (github.event_name == 'release' && !github.event.release.prerelease) || (github.event_name == 'push' && github.ref_name == 'main') }}
             type=ref,event=branch,enable=${{ github.event_name != 'release' }}
             type=sha,format=short,prefix=sha-
           labels: |
@@ -86,6 +87,7 @@ jobs:
 
   helm-chart:
     name: Publish Helm chart and release assets
+    needs: docker-images
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -109,6 +111,9 @@ jobs:
           if [[ "${GITHUB_EVENT_NAME}" == "release" ]]; then
             version="${GITHUB_REF_NAME#v}"
             app_version="$version"
+          elif [[ "${GITHUB_EVENT_NAME}" == "push" && "${GITHUB_REF_NAME}" == "main" ]]; then
+            version="${chart_base_version}-main.${GITHUB_RUN_NUMBER}"
+            app_version="latest"
           else
             safe_ref=$(printf '%s' "${GITHUB_REF_NAME}" \
               | tr '[:upper:]' '[:lower:]' \

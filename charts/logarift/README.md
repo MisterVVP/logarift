@@ -23,7 +23,7 @@ helm upgrade --install logarift oci://ghcr.io/mistervvp/charts/logarift \
   --version 0.1.0
 ```
 
-The chart defaults to stable `0.1.0` application images published under `ghcr.io/mistervvp`: `logarift-api`, `logarift-frontend`, `logarift-math-engine`, and `logarift-llm-adapter`. Packaged release and `dev-*` charts are rewritten by the release workflow to use the matching release or branch image tag. If the GHCR packages are private, authenticate Helm and configure Kubernetes image pull secrets before installing.
+The chart defaults to the `latest` application images published under `ghcr.io/mistervvp`: `logarift-api`, `logarift-frontend`, `logarift-math-engine`, and `logarift-llm-adapter`. Every push to `main` refreshes those `latest` image tags and publishes a `0.1.0-main.<run>` chart whose default app image tag is also `latest`. Packaged GitHub release and `dev-*` charts are rewritten by the release workflow to use the matching release or branch image tag. If the GHCR packages are private, authenticate Helm and configure Kubernetes image pull secrets before installing.
 
 Port-forward the frontend when Gateway API exposure is disabled:
 
@@ -126,7 +126,7 @@ The backend also supports configurable upload/export persistence, probes, a PodD
 
 ## Development package testing
 
-Pushes to `dev-*` branches publish development images with the branch name and short SHA tags, plus a development Helm chart version such as `0.1.0-dev.42`. Use those versions to validate chart and image changes before creating a GitHub Release. The development chart app version defaults to the matching branch image tag:
+Pushes to `main` publish `latest` images, short-SHA image tags, and a rolling Helm chart version such as `0.1.0-main.42` whose app version defaults to `latest`. Pushes to `dev-*` branches publish development images with the branch name and short SHA tags, plus a development Helm chart version such as `0.1.0-dev.42`. Use those versions to validate chart and image changes before creating a GitHub Release. The development chart app version defaults to the matching branch image tag:
 
 ```bash
 helm upgrade --install logarift oci://ghcr.io/mistervvp/charts/logarift \
