@@ -31,14 +31,17 @@ For GitHub releases, the workflow uploads these release assets in addition to Gi
 Packages are published by `.github/workflows/release-packages.yml` on:
 
 - GitHub Release publication (`release.published`)
+- pushes to `main`
 - pushes to branches named `dev-*`
 - manual `workflow_dispatch` runs
 
-This supports both release distribution and branch-based integration testing before a release is cut.
+This supports continuously refreshed `latest` packages from `main`, release distribution, and branch-based integration testing before a release is cut.
 
 ## Tagging policy
 
-Release publications use the Git tag as the version source. For a release tag such as `v1.2.3`, images and the Helm chart are published with version `1.2.3`. Non-prerelease publications also update `1.2` and `latest` image tags. The source chart pins stable `0.1.0` image tags for local installs, and the release workflow rewrites packaged chart image tags to the release or branch app version before linting and publishing.
+Release publications use the Git tag as the version source. For a release tag such as `v1.2.3`, images and the Helm chart are published with version `1.2.3`. Non-prerelease publications also update `1.2` and `latest` image tags. The source chart defaults to `latest` image tags for local installs, and the release workflow rewrites packaged chart image tags to the release, `main`, or branch app version before linting and publishing.
+
+Main branch publications update mutable `latest` image tags and immutable short-SHA image tags on every push. The Helm chart is published with the chart base version plus a run-number prerelease suffix, for example `0.1.0-main.42`, and its app version defaults to `latest` so installs target the refreshed main images.
 
 Development branch publications use mutable branch image tags and immutable short-SHA image tags. For example, pushing branch `dev-helm-ghcr` publishes images tagged like:
 
