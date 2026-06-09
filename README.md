@@ -168,14 +168,23 @@ Use `charts/logarift/values.local.yaml` for local MicroK8s installs. It enables 
 ```bash
 microk8s status --wait-ready
 microk8s enable dns hostpath-storage helm3 ingress
+microk8s enable metallb:192.168.1.240-192.168.1.250
 microk8s helm3 upgrade --install logarift charts/logarift \
   --create-namespace --namespace logarift \
   --values charts/logarift/values.local.yaml
 microk8s kubectl -n logarift rollout status statefulset/logarift-ollama
 microk8s kubectl -n logarift rollout status deploy/logarift-llm-adapter
+```  
+Check external IP of traefik gateway via
+```bash
+microk8s kubectl -n ingress get svc traefik
+```  
+Add it to your OS hosts file, e.g. via
+```bash
+echo "192.168.1.240 logarift.local" | sudo tee -a /etc/hosts
 ```
 
-Add `127.0.0.1 logarift.local` to your workstation hosts file if your MicroK8s routing setup does not already resolve that name, then open `http://logarift.local`.
+Open `http://logarift.local`.
 
 For Minikube, kind, Docker Desktop Kubernetes, and similar local clusters without a Gateway API controller, install the chart with defaults and port-forward the frontend Service:
 

@@ -36,4 +36,4 @@ llmAdapter:
   timeoutMS: 15000
   minConfidence: "0.70"
   promptPrivacyMode: text_only
-  allowRemoteRuntime: false
+  allowRemoteRuntime: true
