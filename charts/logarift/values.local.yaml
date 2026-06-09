@@ -1,0 +1,28 @@
+gateway:
+  enabled: true
+
+httpRoute:
+  parentRefs:
+    - name: traefik-gateway
+      namespace: ingress
+
+  hostnames:
+    - logarift.local
+
+backend:
+  persistence:
+    uploads:
+      storageClassName: microk8s-hostpath
+    exports:
+      storageClassName: microk8s-hostpath
+
+mongodb:
+  persistence:
+    storageClassName: microk8s-hostpath
+
+valkey:
+  persistence:
+    storageClassName: microk8s-hostpath
+
+llmAdapter:
+  enabled: false

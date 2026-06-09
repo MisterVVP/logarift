@@ -247,8 +247,7 @@ httpRoute:
   labels: {}
   # httpRoute.parentRefs -- Explicit Gateway parentRefs. Defaults to gateway.name or the release fullname.
   parentRefs: []
-  hostnames:
-    - logarift.local
+  hostnames:  []
   rules:
     - service: backend
       matches:
