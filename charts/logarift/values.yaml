@@ -154,9 +154,9 @@ llmAdapter:
     port: 8091
   # backendURL -- Backend-facing adapter URL. Empty uses the chart-managed Service DNS name in the release namespace.
   backendURL: ""
-  # ollamaURL -- Adapter-facing Ollama-compatible runtime URL. Use a Service DNS name for an in-cluster runtime.
-  ollamaURL: http://ollama:11434
-  model: qwen3:8b
+  # ollamaURL -- Adapter-facing Ollama-compatible runtime URL. Empty uses the chart-managed Ollama Service DNS name when ollama.enabled=true.
+  ollamaURL: ""
+  model: logarift-enricher-qwen3-8b
   timeoutMS: 15000
   minConfidence: "0.70"
   promptPrivacyMode: text_only
@@ -170,6 +170,52 @@ llmAdapter:
   tolerations: []
   affinity: {}
   topologySpreadConstraints: []
+
+ollama:
+  # ollama.enabled -- Deploy an in-cluster Ollama runtime for the LLM adapter.
+  enabled: false
+  replicaCount: 1
+  image:
+    repository: ollama/ollama
+    tag: "latest"
+    digest: ""
+    pullPolicy: IfNotPresent
+  service:
+    type: ClusterIP
+    port: 11434
+  persistence:
+    enabled: true
+    size: 30Gi
+    storageClassName: ""
+    accessModes: ["ReadWriteOnce"]
+  modelInit:
+    # ollama.modelInit.enabled -- Pull the base model and create the Logarift model alias before Ollama starts.
+    enabled: true
+    baseModel: qwen3:8b
+    model: logarift-enricher-qwen3-8b
+    # ollama.modelInit.modelfile -- Optional inline Modelfile override. Empty uses files/ollama/logarift-enricher-qwen3-8b.Modelfile.
+    modelfile: ""
+  env: {}
+  extraEnv: []
+  resources: {}
+  podAnnotations: {}
+  podLabels: {}
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+  topologySpreadConstraints: []
+  livenessProbe:
+    httpGet:
+      path: /api/tags
+      port: http
+    initialDelaySeconds: 30
+    periodSeconds: 30
+  readinessProbe:
+    httpGet:
+      path: /api/tags
+      port: http
+    initialDelaySeconds: 10
+    periodSeconds: 10
 
 mongodb:
   # mongodb.enabled -- Deploy an in-cluster MongoDB for local/small installs. Disable to use an external MongoDB URI.

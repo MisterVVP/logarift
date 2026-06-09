@@ -1,4 +1,5 @@
 {{- $defaultLLMAdapterURL := printf "http://%s-llm-adapter.%s.svc.%s:%v" (include "logarift.fullname" .) .Release.Namespace .Values.clusterDomain .Values.llmAdapter.service.port -}}
+{{- $defaultOllamaURL := printf "http://%s-ollama.%s.svc.%s:%v" (include "logarift.fullname" .) .Release.Namespace .Values.clusterDomain .Values.ollama.service.port -}}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -25,6 +26,6 @@ data:
   VITE_LOGARIFT_API_BASE_URL: {{ .Values.frontend.apiBaseURL | quote }}
   LOGARIFT_LLM_ADAPTER_HOST: "0.0.0.0"
   LOGARIFT_LLM_ADAPTER_PORT: {{ .Values.llmAdapter.service.port | quote }}
-  LOGARIFT_LLM_RUNTIME_URL: {{ .Values.llmAdapter.ollamaURL | quote }}
+  LOGARIFT_LLM_RUNTIME_URL: {{ default $defaultOllamaURL .Values.llmAdapter.ollamaURL | quote }}
   LOGARIFT_LLM_MODEL: {{ .Values.llmAdapter.model | quote }}
   LOGARIFT_LLM_REQUEST_TIMEOUT_MS: {{ .Values.llmAdapter.timeoutMS | quote }}

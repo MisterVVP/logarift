@@ -148,7 +148,7 @@ helm upgrade --install logarift charts/logarift \
   --set valkey.external.url='redis://valkey.example:6379'
 ```
 
-Most Kubernetes placement controls are optional and configurable per component, including `nodeSelector`, `affinity`, pod anti-affinity through `affinity`, `tolerations`, and `topologySpreadConstraints`. The chart also supports existing Secrets for MongoDB and Valkey connection strings, persistence settings, probes, resources, Gateway API HTTPRoutes, and optional LLM adapter deployment.
+Most Kubernetes placement controls are optional and configurable per component, including `nodeSelector`, `affinity`, pod anti-affinity through `affinity`, `tolerations`, and `topologySpreadConstraints`. The chart also supports existing Secrets for MongoDB and Valkey connection strings, persistence settings, probes, resources, Gateway API HTTPRoutes, optional LLM adapter deployment, and optional chart-managed Ollama runtime deployment.
 
 Install a published chart from GHCR by version:
 
@@ -161,25 +161,18 @@ Container images are published to `ghcr.io/mistervvp/logarift-api`, `ghcr.io/mis
 
 ### Local Kubernetes quick start
 
-For MicroK8s, enable DNS, hostpath storage, Helm, and the MicroK8s routing addon. The addon name is `ingress`, but current MicroK8s installs include Gateway API support and expose a Traefik Gateway that this chart can attach to without creating Kubernetes Ingress objects:
+For MicroK8s, enable DNS, hostpath storage, Helm, and the MicroK8s routing addon. The addon name is `ingress`, but current MicroK8s installs include Gateway API support and expose a Traefik Gateway that this chart can attach to without creating Kubernetes Ingress objects.
+
+Use `charts/logarift/values.local.yaml` for local MicroK8s installs. It enables the optional chart-managed Ollama runtime and LLM adapter, stores local data on `microk8s-hostpath`, and keeps the adapter's Ollama traffic on Kubernetes DNS instead of LAN IPs, `localhost`, or `host.docker.internal`. The Ollama init container pulls `qwen3:8b` and creates the default `logarift-enricher-qwen3-8b` model alias from the bundled Logarift Modelfile before the Ollama container starts.
 
 ```bash
 microk8s status --wait-ready
 microk8s enable dns hostpath-storage helm3 ingress
-cat > /tmp/logarift-microk8s-values.yaml <<'EOF'
-gateway:
-  enabled: true
-  create: false
-httpRoute:
-  parentRefs:
-    - name: traefik-gateway
-      namespace: ingress
-  hostnames:
-    - logarift.local
-EOF
 microk8s helm3 upgrade --install logarift charts/logarift \
   --create-namespace --namespace logarift \
-  --values /tmp/logarift-microk8s-values.yaml
+  --values charts/logarift/values.local.yaml
+microk8s kubectl -n logarift rollout status statefulset/logarift-ollama
+microk8s kubectl -n logarift rollout status deploy/logarift-llm-adapter
 ```
 
 Add `127.0.0.1 logarift.local` to your workstation hosts file if your MicroK8s routing setup does not already resolve that name, then open `http://logarift.local`.

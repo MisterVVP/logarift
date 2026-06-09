@@ -1,0 +1,16 @@
+{{- if and .Values.ollama.enabled .Values.ollama.modelInit.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "logarift.fullname" . }}-ollama-modelfile
+  labels:
+    {{- include "logarift.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ollama
+data:
+  Modelfile: |-
+{{- if .Values.ollama.modelInit.modelfile }}
+{{ .Values.ollama.modelInit.modelfile | nindent 4 }}
+{{- else }}
+{{ .Files.Get "files/ollama/logarift-enricher-qwen3-8b.Modelfile" | nindent 4 }}
+{{- end }}
+{{- end }}
