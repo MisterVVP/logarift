@@ -11,3 +11,9 @@
 {{- if and .Values.llmAdapter.enabled (not .Values.ollama.enabled) (eq .Values.llmAdapter.ollamaURL "") -}}
 {{- fail "llmAdapter.enabled=true requires ollama.enabled=true or llmAdapter.ollamaURL for an existing Ollama-compatible runtime" -}}
 {{- end -}}
+{{- if and (eq .Values.ollama.acceleration.type "amd") (not .Values.ollama.acceleration.amd.hostDevices.enabled) (eq .Values.ollama.acceleration.amd.resourceName "") -}}
+{{- fail "ollama.acceleration.type=amd requires ollama.acceleration.amd.hostDevices.enabled=true or ollama.acceleration.amd.resourceName" -}}
+{{- end -}}
+{{- if and (eq .Values.ollama.acceleration.type "nvidia") (eq .Values.ollama.acceleration.nvidia.resourceName "") -}}
+{{- fail "ollama.acceleration.type=nvidia requires ollama.acceleration.nvidia.resourceName" -}}
+{{- end -}}

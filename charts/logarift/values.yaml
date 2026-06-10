@@ -197,6 +197,40 @@ ollama:
     modelfile: ""
   env: {}
   extraEnv: []
+  acceleration:
+    # ollama.acceleration.type -- GPU acceleration mode for chart-managed Ollama. Supported values: none, amd, nvidia.
+    type: none
+    # ollama.acceleration.gpuCount -- Number of GPUs requested when using device-plugin based scheduling.
+    gpuCount: 1
+    # ollama.acceleration.runtimeClassName -- Optional RuntimeClass for GPU runtimes that require one. Applied only to the Ollama pod in GPU modes.
+    runtimeClassName: ""
+    # ollama.acceleration.nodeSelector -- Extra node selector entries for GPU nodes. Merged into ollama.nodeSelector in GPU modes.
+    nodeSelector: {}
+    # ollama.acceleration.tolerations -- Extra tolerations for GPU nodes. Appended to ollama.tolerations in GPU modes.
+    tolerations: []
+    # ollama.acceleration.extraEnv -- Extra environment variables applied only to the Ollama container in GPU modes.
+    extraEnv: []
+    amd:
+      # ollama.acceleration.amd.imageTag -- Recommended ROCm-capable Ollama tag. Set ollama.image.tag explicitly to use it.
+      imageTag: rocm
+      hostDevices:
+        # ollama.acceleration.amd.hostDevices.enabled -- Mount /dev/kfd and /dev/dri from the host for simple local AMD GPU access.
+        enabled: false
+        # ollama.acceleration.amd.hostDevices.privileged -- Set privileged=true on only the Ollama container when host devices are mounted.
+        privileged: true
+        kfdPath: /dev/kfd
+        driPath: /dev/dri
+      # ollama.acceleration.amd.hsaOverrideGfxVersion -- Optional ROCm architecture override, for example "10.3.0" for some RX 6900 XT setups.
+      hsaOverrideGfxVersion: ""
+      # ollama.acceleration.amd.resourceName -- Optional AMD device plugin resource name, for example amd.com/gpu.
+      resourceName: ""
+    nvidia:
+      # ollama.acceleration.nvidia.imageTag -- Recommended NVIDIA-compatible Ollama tag. Set ollama.image.tag explicitly to use it.
+      imageTag: latest
+      # ollama.acceleration.nvidia.resourceName -- Kubernetes resource exposed by the NVIDIA device plugin.
+      resourceName: nvidia.com/gpu
+      visibleDevices: all
+      driverCapabilities: compute,utility
   resources: {}
   podAnnotations: {}
   podLabels: {}

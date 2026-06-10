@@ -1,4 +1,35 @@
 {{- if .Values.ollama.enabled }}
+{{- $acceleration := .Values.ollama.acceleration | default dict }}
+{{- $accelType := $acceleration.type | default "none" }}
+{{- $gpuCount := int ($acceleration.gpuCount | default 1) }}
+{{- $amd := $acceleration.amd | default dict }}
+{{- $amdHostDevices := $amd.hostDevices | default dict }}
+{{- $nvidia := $acceleration.nvidia | default dict }}
+{{- $resources := deepCopy (.Values.ollama.resources | default dict) }}
+{{- if eq $accelType "amd" }}
+{{- if $amd.resourceName }}
+{{- $limits := get $resources "limits" | default dict }}
+{{- $_ := set $limits $amd.resourceName $gpuCount }}
+{{- $_ := set $resources "limits" $limits }}
+{{- end }}
+{{- else if eq $accelType "nvidia" }}
+{{- $limits := get $resources "limits" | default dict }}
+{{- $_ := set $limits $nvidia.resourceName $gpuCount }}
+{{- $_ := set $resources "limits" $limits }}
+{{- end }}
+{{- $nodeSelector := deepCopy (.Values.ollama.nodeSelector | default dict) }}
+{{- if ne $accelType "none" }}
+{{- $nodeSelector = mergeOverwrite $nodeSelector ($acceleration.nodeSelector | default dict) }}
+{{- end }}
+{{- $tolerations := list }}
+{{- range .Values.ollama.tolerations }}
+{{- $tolerations = append $tolerations . }}
+{{- end }}
+{{- if ne $accelType "none" }}
+{{- range ($acceleration.tolerations | default list) }}
+{{- $tolerations = append $tolerations . }}
+{{- end }}
+{{- end }}
 apiVersion: apps/v1
 kind: StatefulSet
 metadata:
@@ -33,6 +64,9 @@ spec:
       {{- end }}
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- if and (ne $accelType "none") $acceleration.runtimeClassName }}
+      runtimeClassName: {{ $acceleration.runtimeClassName | quote }}
+      {{- end }}
       {{- if .Values.ollama.modelInit.enabled }}
       initContainers:
         - name: prepare-model
@@ -71,6 +105,10 @@ spec:
         - name: ollama
           image: {{ include "logarift.image" (dict "root" . "image" .Values.ollama.image) }}
           imagePullPolicy: {{ .Values.ollama.image.pullPolicy }}
+          {{- if and (eq $accelType "amd") $amdHostDevices.enabled $amdHostDevices.privileged }}
+          securityContext:
+            privileged: true
+          {{- end }}
           ports:
             - name: http
               containerPort: 11434
@@ -81,12 +119,37 @@ spec:
             - name: {{ $name }}
               value: {{ $value | quote }}
             {{- end }}
+            {{- if and (eq $accelType "amd") $amd.hsaOverrideGfxVersion }}
+            - name: HSA_OVERRIDE_GFX_VERSION
+              value: {{ $amd.hsaOverrideGfxVersion | quote }}
+            {{- end }}
+            {{- if eq $accelType "nvidia" }}
+            {{- if $nvidia.visibleDevices }}
+            - name: NVIDIA_VISIBLE_DEVICES
+              value: {{ $nvidia.visibleDevices | quote }}
+            {{- end }}
+            {{- if $nvidia.driverCapabilities }}
+            - name: NVIDIA_DRIVER_CAPABILITIES
+              value: {{ $nvidia.driverCapabilities | quote }}
+            {{- end }}
+            {{- end }}
             {{- with .Values.ollama.extraEnv }}
             {{- toYaml . | nindent 12 }}
+            {{- end }}
+            {{- if ne $accelType "none" }}
+            {{- with $acceleration.extraEnv }}
+            {{- toYaml . | nindent 12 }}
+            {{- end }}
             {{- end }}
           volumeMounts:
             - name: data
               mountPath: /root/.ollama
+            {{- if and (eq $accelType "amd") $amdHostDevices.enabled }}
+            - name: amd-kfd
+              mountPath: {{ $amdHostDevices.kfdPath | quote }}
+            - name: amd-dri
+              mountPath: {{ $amdHostDevices.driPath | quote }}
+            {{- end }}
           {{- with .Values.ollama.livenessProbe }}
           livenessProbe:
             {{- toYaml . | nindent 12 }}
@@ -95,11 +158,11 @@ spec:
           readinessProbe:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-          {{- with .Values.ollama.resources }}
+          {{- with $resources }}
           resources:
             {{- toYaml . | nindent 12 }}
           {{- end }}
-      {{- if or (not .Values.ollama.persistence.enabled) .Values.ollama.modelInit.enabled }}
+      {{- if or (not .Values.ollama.persistence.enabled) .Values.ollama.modelInit.enabled (and (eq $accelType "amd") $amdHostDevices.enabled) }}
       volumes:
         {{- if not .Values.ollama.persistence.enabled }}
         - name: data
@@ -110,8 +173,33 @@ spec:
           configMap:
             name: {{ include "logarift.fullname" . }}-ollama-modelfile
         {{- end }}
+        {{- if and (eq $accelType "amd") $amdHostDevices.enabled }}
+        - name: amd-kfd
+          hostPath:
+            path: {{ $amdHostDevices.kfdPath | quote }}
+            type: CharDevice
+        - name: amd-dri
+          hostPath:
+            path: {{ $amdHostDevices.driPath | quote }}
+            type: Directory
+        {{- end }}
       {{- end }}
-      {{- include "logarift.podScheduling" .Values.ollama | nindent 6 }}
+      {{- with $nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ollama.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with $tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.ollama.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
   {{- if .Values.ollama.persistence.enabled }}
   volumeClaimTemplates:
     - metadata:
