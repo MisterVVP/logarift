@@ -22,7 +22,7 @@ ls -l /dev/kfd /dev/dri
 
 ```bash
 microk8s helm3 upgrade --install logarift charts/logarift \
-  --namespace logarift \
+  --create-namespace --namespace logarift \
   --values charts/logarift/values.local.yaml \
   --values charts/logarift/examples/values.local-amd-rocm.yaml
 ```
